@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Zemanat.Core.Security;
+using Zemanat.Data.Entities;
 
 namespace Zemanat.Data.Identity;
 

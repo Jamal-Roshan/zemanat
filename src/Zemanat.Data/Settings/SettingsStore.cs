@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Zemanat.Core.Settings;
+using Zemanat.Data.Entities;
 using Zemanat.Data.Identity;
 
 namespace Zemanat.Data.Settings;
