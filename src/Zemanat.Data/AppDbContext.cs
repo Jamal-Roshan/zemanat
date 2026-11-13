@@ -34,7 +34,6 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
         {
             e.HasKey(x => x.Key);
             e.Property(x => x.Key).HasMaxLength(100);
-            e.Property(x => x.Value).HasColumnType("nvarchar(max)");
         });
     }
 }
