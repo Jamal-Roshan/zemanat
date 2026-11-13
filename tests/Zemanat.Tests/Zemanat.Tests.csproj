@@ -25,6 +25,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Zemanat.Data\Zemanat.Data.csproj" />
     <ProjectReference Include="..\..\src\Zemanat.Core\Zemanat.Core.csproj" />
   </ItemGroup>
 
