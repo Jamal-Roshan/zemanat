@@ -21,6 +21,7 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
             e.Property(x => x.FirstName).HasMaxLength(100);
             e.Property(x => x.LastName).HasMaxLength(100);
             e.Property(x => x.NationalCode).HasMaxLength(10);
+            e.Property(x => x.OrgUnit).HasMaxLength(200);
             e.Property(x => x.DeactivationReason).HasMaxLength(500);
             e.HasIndex(x => x.NationalCode);
         });

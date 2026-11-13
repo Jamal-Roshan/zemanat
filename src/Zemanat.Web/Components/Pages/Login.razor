@@ -1,0 +1,41 @@
+@page "/login"
+@attribute [ExcludeFromInteractiveRouting]
+@using Zemanat.Web.Auth
+@inject NavigationManager Navigation
+
+<PageTitle>ورود</PageTitle>
+
+<div class="row justify-content-center">
+    <div class="col-md-5 col-lg-4">
+        <h1 class="h4 mb-3 text-center">ورود به سامانه</h1>
+
+        @if (Error == "invalid")
+        {
+            <div class="alert alert-danger">نام کاربری یا رمز عبور نادرست است.</div>
+        }
+        else if (Error == "locked")
+        {
+            <div class="alert alert-danger">به دلیل چند بار ورود ناموفق، حساب به‌مدت ۱۵ دقیقه قفل شد.</div>
+        }
+
+        @* A normal HTML form: the cookie is written by the /account/login endpoint. *@
+        <form method="post" action="/account/login" data-enhance="false" class="card card-body">
+            <AntiforgeryToken />
+            <input type="hidden" name="returnUrl" value="@AccountEndpoints.SafeReturnUrl(ReturnUrl)" />
+            <div class="mb-3">
+                <label class="form-label" for="username">نام کاربری (کد پرسنلی)</label>
+                <input id="username" name="username" class="form-control" dir="ltr" autocomplete="username" autofocus />
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="password">رمز عبور</label>
+                <input id="password" name="password" type="password" class="form-control" dir="ltr" autocomplete="current-password" />
+            </div>
+            <button type="submit" class="btn btn-primary w-100">ورود</button>
+        </form>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "error")] public string? Error { get; set; }
+    [SupplyParameterFromQuery(Name = "returnUrl")] public string? ReturnUrl { get; set; }
+}

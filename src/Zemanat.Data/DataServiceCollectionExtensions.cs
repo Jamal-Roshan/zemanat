@@ -18,6 +18,8 @@ public static class DataServiceCollectionExtensions
         services.AddScoped<SettingsStore>();
         services.AddScoped<IPasswordRuleSwitch>(sp => sp.GetRequiredService<SettingsStore>());
         services.AddScoped<DatabaseSeeder>();
+        services.AddScoped<Users.UserAdminService>();
+        services.AddScoped<Personnel.PersonnelImportService>();
 
         services.AddIdentityCore<AppUser>(o =>
             {

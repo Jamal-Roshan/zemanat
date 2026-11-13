@@ -1,0 +1,171 @@
+@page "/users"
+@attribute [Authorize(Roles = "Manager,Operator")]
+@using Zemanat.Core.Domain
+@using Zemanat.Core.Security
+@using Zemanat.Core.Text
+@using Zemanat.Data.Users
+@inject UserAdminService Admin
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>کاربران</PageTitle>
+
+<h1 class="h4 mb-3">کاربران و نقش‌ها</h1>
+
+<div class="row g-2 mb-3">
+    <div class="col-md-5"><input class="form-control" placeholder="جست‌وجو: کد پرسنلی، نام، کد ملی، واحد" @bind="query" @bind:event="oninput" @onkeyup="OnKey" /></div>
+    <div class="col-md-3">
+        <select class="form-select" @bind="roleFilter">
+            <option value="">همه‌ی نقش‌ها</option>
+            @foreach (var r in AppRoles.All) { <option value="@r.Name">@r.DefaultTitle</option> }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" @bind="activeFilter">
+            <option value="">همه</option>
+            <option value="1">فعال</option>
+            <option value="0">غیرفعال</option>
+        </select>
+    </div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" @onclick="SearchAsync">جست‌وجو</button></div>
+</div>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert @(isError ? "alert-danger" : "alert-success")">@message</div>
+}
+
+@if (page is not null)
+{
+    <p class="text-muted small">تعداد: <bdi>@PersianText.ToPersianDigits(page.Total.ToString())</bdi></p>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+            <thead><tr><th>کد</th><th>نام</th><th>واحد</th><th>استخدام</th><th>نقش‌ها</th><th>وضعیت</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var u in page.Items)
+            {
+                <tr class="@(u.IsActive ? "" : "table-secondary")">
+                    <td><bdi>@PersianText.ToPersianDigits(u.Code)</bdi></td>
+                    <td>@u.FullName</td>
+                    <td>@u.OrgUnit</td>
+                    <td>@u.EmploymentType.Title()</td>
+                    <td>@string.Join("، ", u.Roles.Select(RoleTitle))</td>
+                    <td>@(u.IsActive ? "فعال" : "غیرفعال")@(u.DeactivationReason is null ? "" : $" ({u.DeactivationReason})")</td>
+                    <td class="text-nowrap">
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => Edit(u)">مدیریت</button>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex gap-2 align-items-center">
+        <button class="btn btn-sm btn-outline-secondary" disabled="@(pageNo <= 1)" @onclick="() => GoAsync(pageNo - 1)">قبلی</button>
+        <span>صفحه‌ی <bdi>@PersianText.ToPersianDigits(pageNo.ToString())</bdi></span>
+        <button class="btn btn-sm btn-outline-secondary" disabled="@(pageNo * PageSize >= page.Total)" @onclick="() => GoAsync(pageNo + 1)">بعدی</button>
+    </div>
+}
+
+@if (editing is not null)
+{
+    <div class="card card-body mt-4">
+        <h2 class="h5">@editing.FullName (<bdi>@PersianText.ToPersianDigits(editing.Code)</bdi>)</h2>
+
+        @if (isManager)
+        {
+            <div class="mb-3">
+                <div class="fw-bold mb-1">نقش‌ها</div>
+                @foreach (var r in AppRoles.All)
+                {
+                    <label class="me-3">
+                        <input type="checkbox" checked="@selectedRoles.Contains(r.Name)" @onchange="e => ToggleRole(r.Name, (bool)e.Value!)" />
+                        @r.DefaultTitle
+                    </label>
+                }
+                <div><button class="btn btn-sm btn-primary mt-2" @onclick="SaveRolesAsync">ذخیره‌ی نقش‌ها</button></div>
+            </div>
+        }
+
+        <div class="mb-3">
+            @if (editing.IsActive)
+            {
+                <div class="input-group">
+                    <input class="form-control" placeholder="دلیل غیرفعال‌سازی" @bind="reason" />
+                    <button class="btn btn-outline-danger" @onclick="() => SetActiveAsync(false)">غیرفعال‌سازی</button>
+                </div>
+            }
+            else
+            {
+                <button class="btn btn-outline-success" @onclick="() => SetActiveAsync(true)">فعال‌سازی مجدد</button>
+            }
+        </div>
+
+        <div>
+            <button class="btn btn-outline-warning" @onclick="ResetAsync">بازنشانی رمز (برابر کد پرسنلی)</button>
+            <button class="btn btn-link" @onclick="() => editing = null">بستن</button>
+        </div>
+    </div>
+}
+
+@code {
+    private const int PageSize = 50;
+    private string? query, roleFilter = "", activeFilter = "";
+    private UserPage? page;
+    private int pageNo = 1;
+    private UserListItem? editing;
+    private HashSet<string> selectedRoles = new();
+    private string? reason, message;
+    private bool isError, isManager;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthState.GetAuthenticationStateAsync();
+        isManager = state.User.IsInRole(AppRoles.Manager);
+        await GoAsync(1);
+    }
+
+    private static string RoleTitle(string name) => AppRoles.All.FirstOrDefault(r => r.Name == name)?.DefaultTitle ?? name;
+
+    private Task SearchAsync() => GoAsync(1);
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SearchAsync();
+    }
+
+    private async Task GoAsync(int n)
+    {
+        pageNo = n;
+        bool? active = activeFilter switch { "1" => true, "0" => false, _ => null };
+        page = await Admin.SearchAsync(query, roleFilter, active, pageNo, PageSize);
+    }
+
+    private void Edit(UserListItem u)
+    {
+        editing = u;
+        selectedRoles = u.Roles.ToHashSet();
+        reason = null;
+        message = null;
+    }
+
+    private void ToggleRole(string role, bool on)
+    {
+        if (on) selectedRoles.Add(role); else selectedRoles.Remove(role);
+    }
+
+    private Task SaveRolesAsync() => RunAsync(() => Admin.SetRolesAsync(editing!.Id, selectedRoles), "نقش‌ها ذخیره شد.");
+    private Task SetActiveAsync(bool active) => RunAsync(() => Admin.SetActiveAsync(editing!.Id, active, reason), active ? "کاربر فعال شد." : "کاربر غیرفعال شد.");
+    private Task ResetAsync() => RunAsync(() => Admin.ResetPasswordAsync(editing!.Id), "رمز عبور بازنشانی شد.");
+
+    private async Task RunAsync(Func<Task<string?>> action, string success)
+    {
+        var error = await action();
+        isError = error is not null;
+        message = error ?? success;
+        if (!isError)
+        {
+            await GoAsync(pageNo);
+            editing = page?.Items.FirstOrDefault(u => u.Id == editing!.Id);
+        }
+    }
+}

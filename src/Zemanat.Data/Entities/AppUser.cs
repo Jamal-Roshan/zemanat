@@ -12,6 +12,9 @@ public class AppUser : IdentityUser<int>
     /// <summary>The national code, used only for matching rows in the personnel Excel file.</summary>
     public string NationalCode { get; set; } = string.Empty;
 
+    /// <summary>The organizational unit from the personnel Excel file.</summary>
+    public string OrgUnit { get; set; } = string.Empty;
+
     public EmploymentType EmploymentType { get; set; } = EmploymentType.Official;
 
     /// <summary>The monthly net pay in Rials.</summary>

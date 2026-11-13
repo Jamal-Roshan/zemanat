@@ -1,0 +1,94 @@
+@page "/import"
+@attribute [Authorize(Roles = "Manager,Operator")]
+@using Zemanat.Core.Text
+@using Zemanat.Data.Personnel
+@inject PersonnelImportService Importer
+
+<PageTitle>بارگذاری پرسنل</PageTitle>
+
+<h1 class="h4 mb-3">بارگذاری اکسل پرسنل</h1>
+
+<div class="card card-body mb-3">
+    <p class="mb-2">فایل اکسل (xlsx) باید در سطر اول این ستون‌ها را داشته باشد:
+        کد پرسنلی، نام، نام خانوادگی، کد ملی، خالص پرداختی (ریال)، نوع استخدام (رسمی / آزمایشی / پیمانی)، واحد سازمانی.</p>
+    <ul class="small text-muted">
+        <li>اگر حتی یک ردیف خطا داشته باشد، هیچ تغییری ذخیره نمی‌شود.</li>
+        <li>افراد جدید ساخته می‌شوند؛ رمز اولیه‌ی آن‌ها همان کد پرسنلی است. رمز افراد موجود تغییر نمی‌کند.</li>
+        <li>افرادی که در فایل نباشند غیرفعال می‌شوند.</li>
+    </ul>
+    <InputFile OnChange="OnFile" accept=".xlsx" class="form-control mb-3" />
+    <button class="btn btn-primary" disabled="@(file is null || busy)" @onclick="RunAsync">
+        @(busy ? "در حال پردازش..." : "بررسی و ورود اطلاعات")
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert alert-danger">@message</div>
+}
+
+@if (result is { Success: true })
+{
+    <div class="alert alert-success">
+        ورود اطلاعات انجام شد: <bdi>@Fa(result.Added)</bdi> نفر جدید، <bdi>@Fa(result.Updated)</bdi> نفر به‌روزرسانی،
+        <bdi>@Fa(result.Reactivated)</bdi> نفر فعال‌شده‌ی مجدد، <bdi>@Fa(result.Deactivated)</bdi> نفر غیرفعال.
+    </div>
+}
+else if (result is not null)
+{
+    <div class="alert alert-danger">فایل خطا دارد و هیچ اطلاعاتی ذخیره نشد (<bdi>@Fa(result.Errors.Count)</bdi> خطا).</div>
+    <table class="table table-sm table-bordered">
+        <thead><tr><th style="width:6rem">ردیف</th><th>خطا</th></tr></thead>
+        <tbody>
+        @foreach (var e in result.Errors.Take(300))
+        {
+            <tr><td><bdi>@(e.RowNumber == 0 ? "-" : Fa(e.RowNumber))</bdi></td><td>@e.Message</td></tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private const long MaxBytes = 10 * 1024 * 1024;
+    private IBrowserFile? file;
+    private PersonnelImportResult? result;
+    private string? message;
+    private bool busy;
+
+    private static string Fa(int n) => PersianText.ToPersianDigits(n.ToString());
+
+    private void OnFile(InputFileChangeEventArgs e)
+    {
+        file = e.File;
+        result = null;
+        message = file.Size > MaxBytes ? "حجم فایل باید کمتر از ۱۰ مگابایت باشد." : null;
+        if (message is not null) file = null;
+    }
+
+    private async Task RunAsync()
+    {
+        if (file is null) return;
+        busy = true;
+        message = null;
+        try
+        {
+            // Copy to memory first: ClosedXML needs a seekable stream.
+            await using var memory = new MemoryStream();
+            await using (var upload = file.OpenReadStream(MaxBytes))
+            {
+                await upload.CopyToAsync(memory);
+            }
+
+            memory.Position = 0;
+            result = await Importer.ImportAsync(memory);
+        }
+        catch (Exception)
+        {
+            message = "پردازش فایل با خطا روبه‌رو شد. فایل را بررسی و دوباره تلاش کنید.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

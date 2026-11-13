@@ -8,12 +8,19 @@
     <link rel="stylesheet" href="lib/bootstrap/css/bootstrap.rtl.min.css" />
     <link rel="stylesheet" href="lib/bootstrap-icons/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="css/app.css" />
-    <HeadOutlet @rendermode="InteractiveServer" />
+    <HeadOutlet @rendermode="PageRenderMode" />
 </head>
 
 <body>
-    <Routes @rendermode="InteractiveServer" />
+    <Routes @rendermode="PageRenderMode" />
     <script src="_framework/blazor.web.js"></script>
 </body>
 
 </html>
+
+@code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    // Pages marked [ExcludeFromInteractiveRouting] (the login page) are rendered as plain HTML so their form can set the cookie.
+    private IComponentRenderMode? PageRenderMode => HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+}

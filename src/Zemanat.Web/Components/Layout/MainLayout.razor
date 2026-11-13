@@ -1,8 +1,22 @@
 @inherits LayoutComponentBase
+@using Zemanat.Core.Security
 
 <header class="app-header">
-    <div class="container d-flex align-items-center justify-content-between py-3">
-        <span class="app-title">سامانه‌ی صدور ضمانت‌نامه و گواهی</span>
+    <div class="container d-flex align-items-center justify-content-between py-3 flex-wrap gap-2">
+        <a class="app-title text-decoration-none" href="/">سامانه‌ی صدور ضمانت‌نامه و گواهی</a>
+        <AuthorizeView>
+            <Authorized>
+                <nav class="d-flex align-items-center gap-3">
+                    <AuthorizeView Roles="@($"{AppRoles.Manager},{AppRoles.Operator}")" Context="staff">
+                        <a href="/users">کاربران</a>
+                        <a href="/import">بارگذاری پرسنل</a>
+                    </AuthorizeView>
+                    <a href="/change-password">تغییر رمز</a>
+                    <span class="text-muted"><bdi>@context.User.Identity?.Name</bdi></span>
+                    <a href="/account/logout" class="btn btn-sm btn-outline-secondary">خروج</a>
+                </nav>
+            </Authorized>
+        </AuthorizeView>
     </div>
 </header>
 
