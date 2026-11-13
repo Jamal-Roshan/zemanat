@@ -1,0 +1,26 @@
+## Build output
+bin/
+obj/
+publish/
+TestResults/
+*.trx
+
+## Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.DotSettings.user
+
+## Node (only used by CI to vendor front-end assets)
+node_modules/
+
+## Local secrets and data - never commit these
+appsettings.*.local.json
+*.pfx
+*.mdf
+*.ldf
+*.bak
+secrets.json
+.env

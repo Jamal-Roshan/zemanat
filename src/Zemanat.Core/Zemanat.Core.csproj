@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Zemanat.Core</RootNamespace>
+    <AssemblyName>Zemanat.Core</AssemblyName>
+  </PropertyGroup>
+
+</Project>

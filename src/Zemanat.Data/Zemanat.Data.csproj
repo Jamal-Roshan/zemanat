@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Zemanat.Data</RootNamespace>
+    <AssemblyName>Zemanat.Data</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zemanat.Core\Zemanat.Core.csproj" />
+  </ItemGroup>
+
+</Project>

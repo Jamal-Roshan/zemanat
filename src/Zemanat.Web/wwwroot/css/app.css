@@ -1,0 +1,66 @@
+/* Vazir font (digits are always Persian, Latin letters fall back to the system font) */
+@font-face {
+    font-family: 'Vazir';
+    font-style: normal;
+    font-weight: 300;
+    font-display: swap;
+    src: url('../fonts/vazir/Vazir-Light-FD-WOL.woff2') format('woff2'),
+         url('../fonts/vazir/Vazir-Light-FD-WOL.woff') format('woff');
+}
+
+@font-face {
+    font-family: 'Vazir';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/vazir/Vazir-FD-WOL.woff2') format('woff2'),
+         url('../fonts/vazir/Vazir-FD-WOL.woff') format('woff');
+}
+
+@font-face {
+    font-family: 'Vazir';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('../fonts/vazir/Vazir-Medium-FD-WOL.woff2') format('woff2'),
+         url('../fonts/vazir/Vazir-Medium-FD-WOL.woff') format('woff');
+}
+
+@font-face {
+    font-family: 'Vazir';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../fonts/vazir/Vazir-Bold-FD-WOL.woff2') format('woff2'),
+         url('../fonts/vazir/Vazir-Bold-FD-WOL.woff') format('woff');
+}
+
+:root {
+    --bs-body-font-family: 'Vazir', Tahoma, 'Segoe UI', sans-serif;
+    --app-primary: #1f5f8b;
+}
+
+html, body {
+    font-family: var(--bs-body-font-family);
+    direction: rtl;
+    min-height: 100%;
+}
+
+body {
+    background: #f5f7fa;
+}
+
+.app-header {
+    background: var(--app-primary);
+    color: #fff;
+}
+
+.app-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* numbers such as 123.1405.106 must keep their left-to-right order inside RTL text */
+bdi, .ltr {
+    unicode-bidi: isolate;
+}

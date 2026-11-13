@@ -1,0 +1,20 @@
+@page "/"
+@using Zemanat.Core.Dates
+@using Zemanat.Core.Finance
+@using Zemanat.Core.Text
+
+<PageTitle>سامانه‌ی صدور ضمانت‌نامه و گواهی</PageTitle>
+
+<h1 class="h3 mb-4">خوش آمدید</h1>
+
+<div class="card">
+    <div class="card-body">
+        <p class="mb-2">پایه‌ی پروژه آماده است. ابزارهای فارسی در هسته کار می‌کنند:</p>
+        <ul class="mb-0">
+            <li>تاریخ امروز: <bdi>@JalaliDate.Format(IranClock.NowIran(), persianDigits: true)</bdi></li>
+            <li>مبلغ نمونه: <bdi>@MoneyFormatter.FormatWithUnit(1_500_000, MoneyUnit.Rial)</bdi></li>
+            <li>به حروف: @MoneyFormatter.AmountInWords(1_500_000, MoneyUnit.Toman)</li>
+            <li>نمونه‌ی نرمال‌سازی: @PersianText.NormalizeLetters("علي كريمي")</li>
+        </ul>
+    </div>
+</div>

@@ -1,0 +1,53 @@
+name: Vendor front-end assets
+
+# Run this once by hand (Actions tab -> "Vendor front-end assets" -> Run workflow).
+# It downloads Bootstrap 5 (RTL) and Bootstrap Icons with npm and commits them into
+# src/Zemanat.Web/wwwroot/lib, so the finished site works fully offline (no CDN).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Download packages
+        run: |
+          mkdir -p /tmp/vendor
+          cd /tmp/vendor
+          npm init -y > /dev/null
+          npm install bootstrap@5.3 bootstrap-icons@1.11 --no-audit --no-fund
+
+      - name: Copy files into the web project
+        run: |
+          SRC=/tmp/vendor/node_modules
+          DEST="$GITHUB_WORKSPACE/src/Zemanat.Web/wwwroot/lib"
+          mkdir -p "$DEST/bootstrap/css" "$DEST/bootstrap/js" "$DEST/bootstrap-icons/fonts"
+          cp "$SRC/bootstrap/dist/css/bootstrap.rtl.min.css" "$DEST/bootstrap/css/"
+          cp "$SRC/bootstrap/dist/js/bootstrap.bundle.min.js" "$DEST/bootstrap/js/"
+          cp "$SRC/bootstrap/LICENSE" "$DEST/bootstrap/LICENSE"
+          cp "$SRC/bootstrap-icons/font/bootstrap-icons.min.css" "$DEST/bootstrap-icons/"
+          cp "$SRC/bootstrap-icons/font/fonts/bootstrap-icons.woff2" "$DEST/bootstrap-icons/fonts/"
+          cp "$SRC/bootstrap-icons/font/fonts/bootstrap-icons.woff" "$DEST/bootstrap-icons/fonts/"
+          cp "$SRC/bootstrap-icons/LICENSE" "$DEST/bootstrap-icons/LICENSE"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/Zemanat.Web/wwwroot/lib
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+          else
+            git commit -m "chore: vendor Bootstrap 5 RTL and Bootstrap Icons"
+            git push
+          fi
