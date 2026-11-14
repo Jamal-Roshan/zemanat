@@ -170,11 +170,28 @@ namespace Zemanat.Data.Migrations
                     b.Property<long>("ExcessAmountRial")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("FatherName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("GenderPrefix")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
                     b.Property<bool>("IsSurplus")
                         .HasColumnType("bit");
 
                     b.Property<DateTime?>("IssuedUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("LoanOwnerFatherName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("LoanOwnerName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("NationalCode")
                         .IsRequired()
@@ -240,6 +257,32 @@ namespace Zemanat.Data.Migrations
                         .HasFilter("[SequenceYear] IS NOT NULL AND [Sequence] IS NOT NULL");
 
                     b.ToTable("Documents");
+                });
+
+            modelBuilder.Entity("Zemanat.Data.Documents.PrintTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Html")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind")
+                        .IsUnique();
+
+                    b.ToTable("PrintTemplates");
                 });
 
             modelBuilder.Entity("Zemanat.Data.Documents.SecretariatCounter", b =>
