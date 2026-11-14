@@ -32,8 +32,10 @@ public class UserAdminService
         var text = Core.Text.PersianText.ToLatinDigits(Core.Text.PersianText.CleanText(query));
         if (text.Length > 0)
         {
+            // Digits may be typed in either script and the stored text may use either one, so match both spellings.
+            var fa = Core.Text.PersianText.ToPersianDigits(text);
             q = q.Where(u => u.UserName!.Contains(text) || u.FirstName.Contains(text) || u.LastName.Contains(text)
-                             || u.NationalCode.Contains(text) || u.OrgUnit.Contains(text));
+                             || u.NationalCode.Contains(text) || u.OrgUnit.Contains(text) || u.OrgUnit.Contains(fa));
         }
 
         if (active is not null)

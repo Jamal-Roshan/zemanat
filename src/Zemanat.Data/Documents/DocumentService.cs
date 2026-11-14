@@ -232,11 +232,15 @@ public class DocumentService
         if (filter.Status is not null) q = q.Where(d => d.Status == filter.Status);
         if (filter.Type is not null) q = q.Where(d => d.Type == filter.Type);
 
+        // Digits may be typed in either script and the stored text may use either one, so match both spellings.
         var text = PersianText.ToLatinDigits(PersianText.CleanText(filter.Text));
+        var fa = PersianText.ToPersianDigits(text);
         if (text.Length > 0)
         {
-            q = q.Where(d => d.PersonnelCode.Contains(text) || d.PersonName.Contains(text) || d.NationalCode.Contains(text)
-                             || d.Beneficiary.Contains(text) || (d.NumberText != null && d.NumberText.Contains(text)));
+            q = q.Where(d => d.PersonnelCode.Contains(text) || d.PersonName.Contains(text) || d.PersonName.Contains(fa)
+                             || d.NationalCode.Contains(text)
+                             || d.Beneficiary.Contains(text) || d.Beneficiary.Contains(fa)
+                             || (d.NumberText != null && d.NumberText.Contains(text)));
         }
 
         var total = await q.CountAsync(ct);
