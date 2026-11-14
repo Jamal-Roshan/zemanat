@@ -1,0 +1,46 @@
+@page "/maintenance"
+@attribute [Authorize(Roles = "Manager")]
+@using Zemanat.Data.Documents
+@inject MaintenanceService Maintenance
+@inject NavigationManager Navigation
+
+<PageTitle>پاک‌سازی سامانه</PageTitle>
+
+<h1 class="h4 mb-3">پاک‌سازی کامل سامانه</h1>
+
+<div class="alert alert-danger">
+    همه‌ی کاربران، اسناد، استعلام‌ها، شمارنده‌ها، قالب‌های ویرایش‌شده و تنظیمات پاک می‌شوند و فقط تنظیمات پیش‌فرض و
+    کاربر <bdi>admin</bdi> (رمز <bdi>admin</bdi>) باقی می‌ماند. این کار برگشت‌پذیر نیست؛ پیش از آن از پایگاه داده نسخه‌ی پشتیبان بگیرید.
+</div>
+
+@if (!string.IsNullOrEmpty(error)) { <div class="alert alert-warning">@error</div> }
+
+<div class="card card-body">
+    <label class="form-label">برای تأیید، کلمه‌ی <strong>پاک‌سازی</strong> را بنویسید</label>
+    <div class="input-group">
+        <input class="form-control" @bind="confirm" @bind:event="oninput" />
+        <button class="btn btn-danger" disabled="@(confirm.Trim() != "پاک‌سازی" || busy)" @onclick="WipeAsync">پاک‌سازی همه‌چیز</button>
+    </div>
+</div>
+
+@code {
+    private string confirm = string.Empty;
+    private string? error;
+    private bool busy;
+
+    private async Task WipeAsync()
+    {
+        busy = true;
+        try
+        {
+            await Maintenance.WipeAllAsync();
+            // The signed-in account no longer exists, so leave through the logout endpoint.
+            Navigation.NavigateTo("/account/logout", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            error = "پاک‌سازی انجام نشد: " + ex.Message;
+            busy = false;
+        }
+    }
+}

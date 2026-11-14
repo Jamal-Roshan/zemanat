@@ -1,0 +1,97 @@
+@page "/templates"
+@attribute [Authorize(Roles = "Manager")]
+@using Zemanat.Core.Domain
+@using Zemanat.Data.Documents
+@inject TemplateService Templates
+
+<PageTitle>قالب‌های چاپ</PageTitle>
+
+<h1 class="h4 mb-3">ویرایش قالب‌های چاپ</h1>
+
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">قالب</label>
+            <select class="form-select" @bind="kindValue" @bind:after="LoadAsync">
+                <option value="@((int)TemplateKind.Guarantee)">ضمانت‌نامه</option>
+                <option value="@((int)TemplateKind.SalaryCertificate)">گواهی کسر از حقوق</option>
+                <option value="@((int)TemplateKind.BankInquiry)">استعلام بانکی</option>
+            </select>
+        </div>
+        <div class="col-md-8 text-muted small">
+            جای‌نگه‌دار را به شکل <bdi dir="ltr">{{Name}}</bdi> بنویسید. قالب بر پایه‌ی HTML است و اندازه‌ها بر حسب سانتی‌متر هستند.
+        </div>
+    </div>
+    @if (keys.Count > 0)
+    {
+        <div class="mt-3 small"><strong>جای‌نگه‌دارهای مجاز:</strong> @foreach (var k in keys) { <code class="ms-2" dir="ltr">{{@k}}</code> }</div>
+    }
+</div>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert @(isError ? "alert-danger" : "alert-success")">@message</div>
+}
+
+<div class="card card-body mb-3">
+    <textarea class="form-control font-monospace" dir="ltr" rows="18" @bind="html" @bind:event="oninput"></textarea>
+    <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-primary" @onclick="SaveAsync">ذخیره</button>
+        <button class="btn btn-outline-secondary" @onclick="() => preview = !preview">@(preview ? "پنهان کردن پیش‌نمایش" : "پیش‌نمایش با داده‌ی نمونه")</button>
+        <button class="btn btn-outline-danger me-auto" @onclick="ResetAsync">بازگشت به قالب اولیه</button>
+    </div>
+</div>
+
+@if (preview)
+{
+    <div class="print-scroll">@((MarkupString)TemplateService.RenderSample(Kind, html))</div>
+}
+
+@code {
+    private int kindValue = (int)TemplateKind.Guarantee;
+    private string html = string.Empty;
+    private string? message;
+    private bool isError, preview;
+    private IReadOnlyList<string> keys = Array.Empty<string>();
+
+    private TemplateKind Kind => (TemplateKind)kindValue;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        html = await Templates.GetHtmlAsync(Kind) ?? string.Empty;
+        keys = TemplateService.KnownKeys(Kind).OrderBy(k => k).ToList();
+        message = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            isError = true;
+            message = "متن قالب نباید خالی باشد.";
+            return;
+        }
+
+        var unknown = TemplateService.UnknownPlaceholders(Kind, html);
+        if (unknown.Count > 0)
+        {
+            isError = true;
+            message = "جای‌نگه‌دارهای ناشناخته: " + string.Join("، ", unknown);
+            return;
+        }
+
+        await Templates.SaveAsync(Kind, html);
+        isError = false;
+        message = "قالب ذخیره شد.";
+    }
+
+    private async Task ResetAsync()
+    {
+        await Templates.ResetAsync(Kind);
+        await LoadAsync();
+        isError = false;
+        message = "قالب به حالت اولیه برگشت.";
+    }
+}
