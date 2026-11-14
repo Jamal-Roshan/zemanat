@@ -26,6 +26,11 @@ public static class SystemSettingsValidator
             errors.Add("تعداد ماه باید بین ۱ و ۱۲۰ باشد.");
         }
 
+        if (settings.ValidityDays < 1 || settings.ValidityDays > 3650)
+        {
+            errors.Add("مدت اعتبار سند باید بین ۱ و ۳۶۵۰ روز باشد.");
+        }
+
         if (string.IsNullOrWhiteSpace(settings.DocumentNumberCode))
         {
             errors.Add("کد شماره‌ی دبیرخانه نمی‌تواند خالی باشد.");

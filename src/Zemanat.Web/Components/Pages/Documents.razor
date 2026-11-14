@@ -32,6 +32,28 @@
     <div class="col-md-2"><button class="btn btn-primary w-100" @onclick="() => GoAsync(1)">جست‌وجو</button></div>
 </div>
 
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert @(isError ? "alert-danger" : "alert-success")">@message</div>
+}
+
+@if (selected is not null)
+{
+    <div class="card card-body mb-3 border border-warning">
+        <div class="mb-2">سند <bdi>@PersianText.ToPersianDigits(selected.NumberText ?? "-")</bdi> - @selected.PersonName.
+            <strong class="text-danger">تسویه و ابطال برگشت‌پذیر نیست.</strong></div>
+        <div class="input-group">
+            @if (selected.Status == DocumentStatus.Issued)
+            {
+                <button class="btn btn-success" @onclick="SettleAsync">تسویه</button>
+            }
+            <input class="form-control" placeholder="دلیل ابطال" @bind="cancelReason" />
+            <button class="btn btn-danger" @onclick="CancelAsync">ابطال</button>
+            <button class="btn btn-outline-secondary" @onclick="() => selected = null">انصراف</button>
+        </div>
+    </div>
+}
+
 @if (page is not null && settings is not null)
 {
     <p class="text-muted small">تعداد: <bdi>@PersianText.ToPersianDigits(page.Total.ToString())</bdi></p>
@@ -49,7 +71,14 @@
                     <td><bdi>@MoneyFormatter.Format(d.AmountRial, settings.MoneyUnit)</bdi>@(d.IsSurplus ? " (مازاد)" : "")</td>
                     <td>@d.Status.Title()</td>
                     <td><bdi>@JalaliDate.Format(IranClock.ToIran(d.CreatedUtc), persianDigits: true)</bdi></td>
-                    <td>@if (d.Status is DocumentStatus.Issued or DocumentStatus.Settled) { <a class="btn btn-sm btn-outline-primary" href="/print/@d.Id"><i class="bi bi-printer ms-1"></i>چاپ</a> }</td>
+                    <td class="text-nowrap">
+                        @if (d.Status is DocumentStatus.Issued or DocumentStatus.Settled) { <a class="btn btn-sm btn-outline-primary" href="/print/@d.Id"><i class="bi bi-printer ms-1"></i>چاپ</a> }
+                        @if (isOperator)
+                        {
+                            @if (d.Status is DocumentStatus.Issued or DocumentStatus.Settled) { <a class="btn btn-sm btn-outline-secondary" href="/inquiry/@d.Id">استعلام</a> }
+                            @if (d.Status is DocumentStatus.Issued or DocumentStatus.PendingApproval) { <button class="btn btn-sm btn-outline-dark" @onclick="() => Select(d)">تسویه / ابطال</button> }
+                        }
+                    </td>
                 </tr>
             }
             </tbody>
@@ -65,7 +94,9 @@
 @code {
     private SystemSettings? settings;
     private DocumentPage? page;
-    private bool isStaff;
+    private bool isStaff, isOperator, isError;
+    private Document? selected;
+    private string? cancelReason, message;
     private int userId, pageNo = 1;
     private string? text, statusText = "";
 
@@ -74,8 +105,28 @@
         settings = await SettingsStore.LoadAsync();
         var state = await AuthState.GetAuthenticationStateAsync();
         userId = AccountEndpoints.GetUserId(state.User) ?? 0;
+        isOperator = state.User.IsInRole(AppRoles.Manager) || state.User.IsInRole(AppRoles.Operator);
         isStaff = state.User.IsInRole(AppRoles.Manager) || state.User.IsInRole(AppRoles.Operator) || state.User.IsInRole(AppRoles.Approver);
         await GoAsync(1);
+    }
+
+    private void Select(Document d)
+    {
+        selected = d;
+        cancelReason = null;
+        message = null;
+    }
+
+    private Task SettleAsync() => CloseAsync(() => DocService.SettleAsync(selected!.Id, userId), "سند تسویه شد.");
+    private Task CancelAsync() => CloseAsync(() => DocService.CancelAsync(selected!.Id, userId, cancelReason), "سند ابطال شد.");
+
+    private async Task CloseAsync(Func<Task<DocumentResult>> action, string success)
+    {
+        var result = await action();
+        isError = !result.Success;
+        message = result.Error ?? success;
+        if (!isError) selected = null;
+        await GoAsync(pageNo);
     }
 
     private async Task OnKey(KeyboardEventArgs e) { if (e.Key == "Enter") await GoAsync(1); }

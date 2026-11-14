@@ -51,6 +51,31 @@ public class Document
     public int? DecidedByUserId { get; set; }
     public DateTime? DecidedUtc { get; set; }
     public string? DecisionNote { get; set; }
+
+    /// <summary>Set when the document is settled or cancelled. Both are final.</summary>
+    public DateTime? ClosedUtc { get; set; }
+    public int? ClosedByUserId { get; set; }
+    public string? ClosedNote { get; set; }
+}
+
+/// <summary>A bank inquiry answer (one per document). It takes its own secretariat number.</summary>
+public class BankInquiry
+{
+    public int Id { get; set; }
+    public int DocumentId { get; set; }
+    public Document? Document { get; set; }
+
+    public string BankLetterNumber { get; set; } = string.Empty;
+    public DateTime BankLetterDate { get; set; }
+    public string BorrowerName { get; set; } = string.Empty;
+    public string? BorrowerFatherName { get; set; }
+
+    public int Sequence { get; set; }
+    public int SequenceYear { get; set; }
+    public string NumberText { get; set; } = string.Empty;
+
+    public DateTime IssuedUtc { get; set; } = DateTime.UtcNow;
+    public int CreatedByUserId { get; set; }
 }
 
 /// <summary>The last used secretariat sequence of one Jalali year. Shared by documents and bank inquiries.</summary>

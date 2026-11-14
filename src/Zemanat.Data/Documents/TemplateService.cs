@@ -17,6 +17,7 @@ public class TemplateService
         {
             TemplateKind.Guarantee => "Templates.Guarantee.html",
             TemplateKind.SalaryCertificate => "Templates.SalaryCertificate.html",
+            TemplateKind.BankInquiry => "Templates.BankInquiry.html",
             _ => null
         };
         if (name is null) return null;

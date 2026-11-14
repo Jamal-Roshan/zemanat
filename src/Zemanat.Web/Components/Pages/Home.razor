@@ -1,11 +1,29 @@
 @page "/"
 @attribute [Authorize]
+@using Zemanat.Core.Finance
 @using Zemanat.Core.Security
+@using Zemanat.Core.Settings
+@using Zemanat.Core.Text
+@using Zemanat.Data.Documents
+@using Zemanat.Data.Settings
+@using Zemanat.Web.Auth
 @inject AuthenticationStateProvider AuthState
+@inject DocumentService DocService
+@inject SettingsStore SettingsStore
 
 <PageTitle>سامانه‌ی صدور ضمانت‌نامه و گواهی</PageTitle>
 
 <h1 class="h4 mb-4">خوش آمدید</h1>
+
+@if (stats is not null && settings is not null)
+{
+    <div class="row g-3 mb-4 text-center">
+        <div class="col-6 col-md-3"><div class="stat-box"><div class="text-muted small">در انتظار تأیید</div><strong class="fs-4"><bdi>@Fa(stats.Pending)</bdi></strong></div></div>
+        <div class="col-6 col-md-3"><div class="stat-box"><div class="text-muted small">صادرشده</div><strong class="fs-4"><bdi>@Fa(stats.Issued)</bdi></strong></div></div>
+        <div class="col-6 col-md-3"><div class="stat-box"><div class="text-muted small">تسویه‌شده</div><strong class="fs-4"><bdi>@Fa(stats.Settled)</bdi></strong></div></div>
+        <div class="col-6 col-md-3"><div class="stat-box"><div class="text-muted small">مبلغ جاری (@MoneyFormatter.UnitTitle(settings.MoneyUnit))</div><strong><bdi>@MoneyFormatter.Format(stats.ActiveAmountRial, settings.MoneyUnit)</bdi></strong></div></div>
+    </div>
+}
 
 <div class="row g-3">
     <div class="col-md-4 col-sm-6">
@@ -57,6 +75,10 @@
 
 @code {
     private bool isManager, isStaff, isApprover;
+    private DocumentStats? stats;
+    private SystemSettings? settings;
+
+    private static string Fa(int n) => PersianText.ToPersianDigits(n.ToString());
 
     protected override async Task OnInitializedAsync()
     {
@@ -64,5 +86,10 @@
         isManager = user.IsInRole(AppRoles.Manager);
         isStaff = isManager || user.IsInRole(AppRoles.Operator);
         isApprover = isManager || user.IsInRole(AppRoles.Approver);
+
+        settings = await SettingsStore.LoadAsync();
+        // Staff and approvers see the totals of everyone; an employee sees only their own documents.
+        var all = isStaff || isApprover;
+        stats = await DocService.GetStatsAsync(all ? null : AccountEndpoints.GetUserId(user));
     }
 }

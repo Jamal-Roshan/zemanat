@@ -20,6 +20,8 @@ public sealed record DocumentExtras(string? FatherName, string? GenderPrefix, st
 
 public sealed record DocumentFilter(string? Text = null, DocumentStatus? Status = null, DocumentType? Type = null, int? PersonId = null);
 
+public sealed record DocumentStats(int Pending, int Issued, int Settled, int Cancelled, int Rejected, long ActiveAmountRial);
+
 public sealed record DocumentPage(IReadOnlyList<Document> Items, int Total);
 
 /// <summary>Creating, approving and listing documents. The ceiling check and numbering run inside one serializable transaction.</summary>
@@ -157,6 +159,54 @@ public class DocumentService
         doc.DecisionNote = PersianText.CleanText(note);
         await _db.SaveChangesAsync(ct);
         return new(null, doc);
+    }
+
+    public Task<Document?> GetAsync(int id, CancellationToken ct = default) =>
+        _db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id, ct);
+
+    /// <summary>Settles an issued document. Final: it cannot be undone.</summary>
+    public async Task<DocumentResult> SettleAsync(int documentId, int userId, CancellationToken ct = default)
+    {
+        var doc = await _db.Documents.FirstOrDefaultAsync(d => d.Id == documentId, ct);
+        if (doc is null) return new("سند پیدا نشد.");
+        if (doc.Status != DocumentStatus.Issued) return new("فقط سند صادرشده قابل تسویه است.");
+
+        doc.Status = DocumentStatus.Settled;
+        doc.ClosedUtc = DateTime.UtcNow;
+        doc.ClosedByUserId = userId;
+        await _db.SaveChangesAsync(ct);
+        return new(null, doc);
+    }
+
+    /// <summary>Cancels a pending or issued document. Final: it cannot be undone. A reason is required.</summary>
+    public async Task<DocumentResult> CancelAsync(int documentId, int userId, string? reason, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(reason)) return new("دلیل ابطال را بنویسید.");
+
+        var doc = await _db.Documents.FirstOrDefaultAsync(d => d.Id == documentId, ct);
+        if (doc is null) return new("سند پیدا نشد.");
+        if (doc.Status is not (DocumentStatus.Issued or DocumentStatus.PendingApproval)) return new("این سند قابل ابطال نیست.");
+
+        doc.Status = DocumentStatus.Cancelled;
+        doc.ClosedUtc = DateTime.UtcNow;
+        doc.ClosedByUserId = userId;
+        doc.ClosedNote = PersianText.CleanText(reason);
+        await _db.SaveChangesAsync(ct);
+        return new(null, doc);
+    }
+
+    /// <summary>Counts for the dashboard. Pass a person id to count only that person's documents.</summary>
+    public async Task<DocumentStats> GetStatsAsync(int? personId = null, CancellationToken ct = default)
+    {
+        var q = _db.Documents.AsNoTracking().AsQueryable();
+        if (personId is not null) q = q.Where(d => d.PersonId == personId);
+
+        var byStatus = await q.GroupBy(d => d.Status).Select(g => new { Status = g.Key, Count = g.Count() }).ToListAsync(ct);
+        int Count(DocumentStatus s) => byStatus.FirstOrDefault(x => x.Status == s)?.Count ?? 0;
+        var active = await q.Where(d => d.Status == DocumentStatus.Issued || d.Status == DocumentStatus.PendingApproval)
+            .SumAsync(d => (long?)d.AmountRial, ct) ?? 0L;
+        return new DocumentStats(Count(DocumentStatus.PendingApproval), Count(DocumentStatus.Issued), Count(DocumentStatus.Settled),
+            Count(DocumentStatus.Cancelled), Count(DocumentStatus.Rejected), active);
     }
 
     public async Task<DocumentPage> SearchAsync(DocumentFilter filter, int page, int pageSize, CancellationToken ct = default)

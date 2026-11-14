@@ -50,6 +50,9 @@ public sealed class SystemSettings
     public string SurplusCommitmentText { get; set; } =
         "اینجانب متعهد می‌شوم که مبلغ مازاد بر سقف مجاز را به‌عنوان تعهد شخصی می‌پذیرم و مسئولیت آن بر عهده‌ی اینجانب است.";
 
+    /// <summary>How many days a printed document stays valid (printed as the "valid until" date).</summary>
+    public int ValidityDays { get; set; } = 30;
+
     // Document numbering: sequence.year.code
     public string DocumentNumberCode { get; set; } = "106";
     public string DocumentNumberSeparator { get; set; } = ".";

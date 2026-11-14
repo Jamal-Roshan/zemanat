@@ -86,6 +86,7 @@ else
         <div class="card card-body mb-3">
             <h2 class="h6 text-primary">شماره‌گذاری، رمز عبور و فهرست‌ها</h2>
             <div class="row g-3">
+                <div class="col-md-3"><label class="form-label">مدت اعتبار سند (روز)</label><InputNumber class="form-control" @bind-Value="model.ValidityDays" /></div>
                 <div class="col-md-3"><label class="form-label">کد شماره‌ی دبیرخانه</label><InputText class="form-control" dir="ltr" @bind-Value="model.DocumentNumberCode" /></div>
                 <div class="col-md-3"><label class="form-label">جداکننده</label><InputText class="form-control" dir="ltr" @bind-Value="model.DocumentNumberSeparator" /></div>
                 <div class="col-md-3">

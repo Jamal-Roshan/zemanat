@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net;
 using Microsoft.EntityFrameworkCore;
 using QRCoder;
@@ -59,9 +58,7 @@ public class DocumentPrintService
     public static IReadOnlyDictionary<string, string> BuildValues(Document doc, SystemSettings s, string fallbackBaseUrl)
     {
         var issued = IranClock.ToIran(doc.IssuedUtc ?? doc.CreatedUtc);
-        var calendar = new PersianCalendar();
-        var month = JalaliDate.MonthNames[calendar.GetMonth(issued) - 1];
-        var validity = PersianText.ToPersianDigits($"{month} {calendar.GetYear(issued)}");
+        var validUntil = JalaliDate.Format(issued.AddDays(s.ValidityDays), persianDigits: true);
 
         return new Dictionary<string, string>
         {
@@ -87,7 +84,7 @@ public class DocumentPrintService
             ["NetPayWords"] = MoneyFormatter.AmountInWords(doc.NetPayRial, MoneyUnit.Rial),
             ["LoanOwnerName"] = doc.LoanOwnerName ?? string.Empty,
             ["LoanOwnerFatherName"] = doc.LoanOwnerFatherName ?? string.Empty,
-            ["ValidityMonth"] = validity,
+            ["ValidUntil"] = validUntil,
             ["QR"] = QrImageHtml(VerifyUrl(s, fallbackBaseUrl, doc.TrackingCode)),
             ["Sign"] = SignatureHtml(s.SignatureImageDataUri)
         };

@@ -13,6 +13,7 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
 
     public DbSet<SettingEntry> Settings => Set<SettingEntry>();
     public DbSet<Document> Documents => Set<Document>();
+    public DbSet<BankInquiry> BankInquiries => Set<BankInquiry>();
     public DbSet<PrintTemplate> PrintTemplates => Set<PrintTemplate>();
     public DbSet<SecretariatCounter> SecretariatCounters => Set<SecretariatCounter>();
 
@@ -36,6 +37,16 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
         });
 
         builder.Entity<SecretariatCounter>(e => e.HasKey(x => x.Year));
+        builder.Entity<BankInquiry>(e =>
+        {
+            e.Property(x => x.BankLetterNumber).HasMaxLength(50);
+            e.Property(x => x.BorrowerName).HasMaxLength(200);
+            e.Property(x => x.BorrowerFatherName).HasMaxLength(100);
+            e.Property(x => x.NumberText).HasMaxLength(50);
+            e.HasOne(x => x.Document).WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => x.DocumentId).IsUnique();
+            e.HasIndex(x => new { x.SequenceYear, x.Sequence }).IsUnique();
+        });
         builder.Entity<PrintTemplate>(e =>
         {
             e.HasIndex(x => x.Kind).IsUnique();
@@ -52,6 +63,7 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
             e.Property(x => x.NumberText).HasMaxLength(50);
             e.Property(x => x.TrackingCode).HasMaxLength(12);
             e.Property(x => x.DecisionNote).HasMaxLength(500);
+            e.Property(x => x.ClosedNote).HasMaxLength(500);
             e.Property(x => x.FatherName).HasMaxLength(100);
             e.Property(x => x.GenderPrefix).HasMaxLength(10);
             e.Property(x => x.LoanOwnerName).HasMaxLength(200);

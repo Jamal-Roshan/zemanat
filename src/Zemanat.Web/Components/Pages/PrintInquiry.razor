@@ -1,0 +1,33 @@
+@page "/print/inquiry/{Id:int}"
+@attribute [Authorize(Roles = "Manager,Operator")]
+@using Zemanat.Data.Documents
+@inject InquiryService Inquiries
+
+<PageTitle>چاپ استعلام</PageTitle>
+
+<div class="d-flex gap-2 mb-3 no-print">
+    <button class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer ms-1"></i>چاپ</button>
+    <a class="btn btn-outline-secondary" href="/documents">بازگشت به فهرست</a>
+</div>
+
+@if (loaded && html is null)
+{
+    <div class="alert alert-warning no-print">استعلام پیدا نشد.</div>
+}
+else if (html is not null)
+{
+    <div class="print-scroll">@((MarkupString)html)</div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private string? html;
+    private bool loaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        html = await Inquiries.RenderAsync(Id);
+        loaded = true;
+    }
+}
