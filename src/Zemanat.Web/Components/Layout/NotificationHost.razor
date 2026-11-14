@@ -1,0 +1,103 @@
+@implements IDisposable
+@using Zemanat.Core.Security
+@using Zemanat.Data.Documents
+@using Zemanat.Web.Auth
+@inject AuthenticationStateProvider AuthState
+@inject DocumentEventHub Hub
+@inject IJSRuntime JS
+
+<div class="toast-stack no-print">
+    @foreach (var t in toasts)
+    {
+        <div class="alert alert-info shadow d-flex justify-content-between align-items-start gap-3 mb-2">
+            <a href="@t.Url" class="text-reset text-decoration-none" @onclick="() => Dismiss(t)">
+                <i class="bi bi-bell-fill ms-1"></i>@t.Text
+            </a>
+            <button type="button" class="btn-close" aria-label="بستن" @onclick="() => Dismiss(t)"></button>
+        </div>
+    }
+    @if (canAsk)
+    {
+        <button class="btn btn-sm btn-outline-secondary" @onclick="AskAsync">فعال‌سازی اعلان روی صفحه‌ی دسکتاپ</button>
+    }
+</div>
+
+@code {
+    private sealed record Toast(Guid Id, string Text, string Url);
+
+    private readonly List<Toast> toasts = new();
+    private int userId;
+    private bool isApprover, canAsk, disposed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthState.GetAuthenticationStateAsync();
+        userId = AccountEndpoints.GetUserId(state.User) ?? 0;
+        isApprover = state.User.IsInRole(AppRoles.Manager) || state.User.IsInRole(AppRoles.Approver);
+        Hub.Published += OnEvent;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            canAsk = await JS.InvokeAsync<string>("zemanatNotify.status") == "default";
+            if (canAsk) StateHasChanged();
+        }
+        catch (Exception) { }
+    }
+
+    private void OnEvent(DocumentEvent e)
+    {
+        if (disposed) return;
+        _ = InvokeAsync(() => HandleAsync(e));
+    }
+
+    private async Task HandleAsync(DocumentEvent e)
+    {
+        string? text = null, url = null;
+        if (e.Kind == DocumentEventKind.Submitted && isApprover && e.ActorUserId != userId)
+        {
+            text = $"درخواست جدید برای تأیید: {e.PersonName}";
+            url = "/approvals";
+        }
+        else if (e.Kind is DocumentEventKind.Approved or DocumentEventKind.Rejected
+                 && (e.CreatedByUserId == userId || e.PersonId == userId) && e.ActorUserId != userId)
+        {
+            text = e.Kind == DocumentEventKind.Approved
+                ? $"درخواست {e.PersonName} تأیید و صادر شد (شماره {e.NumberText})."
+                : $"درخواست {e.PersonName} رد شد.";
+            url = "/documents";
+        }
+
+        if (text is null || disposed) return;
+
+        var toast = new Toast(Guid.NewGuid(), text, url!);
+        toasts.Add(toast);
+        if (toasts.Count > 5) toasts.RemoveAt(0);
+        StateHasChanged();
+
+        try { await JS.InvokeVoidAsync("zemanatNotify.show", "سامانه‌ی ضمانت‌نامه", text, url); }
+        catch (Exception) { }
+
+        await Task.Delay(TimeSpan.FromSeconds(30));
+        if (disposed) return;
+        toasts.Remove(toast);
+        StateHasChanged();
+    }
+
+    private void Dismiss(Toast t) => toasts.Remove(t);
+
+    private async Task AskAsync()
+    {
+        try { canAsk = await JS.InvokeAsync<string>("zemanatNotify.ask") == "default"; }
+        catch (Exception) { canAsk = false; }
+    }
+
+    public void Dispose()
+    {
+        disposed = true;
+        Hub.Published -= OnEvent;
+    }
+}

@@ -29,11 +29,13 @@ public class DocumentService
 {
     private readonly AppDbContext _db;
     private readonly SettingsStore _settingsStore;
+    private readonly DocumentEventHub _events;
 
-    public DocumentService(AppDbContext db, SettingsStore settingsStore)
+    public DocumentService(AppDbContext db, SettingsStore settingsStore, DocumentEventHub events)
     {
         _db = db;
         _settingsStore = settingsStore;
+        _events = events;
     }
 
     /// <summary>The ceiling position of one person for a possible new amount (0 shows only cap and remaining).</summary>
@@ -127,8 +129,12 @@ public class DocumentService
         }
 
         await tx.CommitAsync(ct);
+        Publish(waits ? DocumentEventKind.Submitted : DocumentEventKind.Issued, creatorId, doc);
         return new(null, doc);
     }
+
+    private void Publish(DocumentEventKind kind, int actorId, Document doc) =>
+        _events.Publish(new DocumentEvent(kind, doc.Id, actorId, doc.CreatedByUserId, doc.PersonId, doc.PersonName, doc.NumberText));
 
     public async Task<DocumentResult> ApproveAsync(int documentId, int approverId, string? note, CancellationToken ct = default)
     {
@@ -145,6 +151,7 @@ public class DocumentService
         Audit.Add(_db, approverId, "approve", $"تأیید و صدور سند شماره {doc.NumberText} ({doc.PersonName})");
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        Publish(DocumentEventKind.Approved, approverId, doc);
         return new(null, doc);
     }
 
@@ -162,6 +169,7 @@ public class DocumentService
         doc.DecisionNote = PersianText.CleanText(note);
         Audit.Add(_db, approverId, "reject", $"رد درخواست {doc.PersonName}: {doc.DecisionNote}");
         await _db.SaveChangesAsync(ct);
+        Publish(DocumentEventKind.Rejected, approverId, doc);
         return new(null, doc);
     }
 
@@ -180,6 +188,7 @@ public class DocumentService
         doc.ClosedByUserId = userId;
         Audit.Add(_db, userId, "settle", $"تسویه سند شماره {doc.NumberText} ({doc.PersonName})");
         await _db.SaveChangesAsync(ct);
+        Publish(DocumentEventKind.Settled, userId, doc);
         return new(null, doc);
     }
 
@@ -198,6 +207,7 @@ public class DocumentService
         doc.ClosedNote = PersianText.CleanText(reason);
         Audit.Add(_db, userId, "cancel", $"ابطال سند {doc.NumberText ?? "بدون شماره"} ({doc.PersonName}): {doc.ClosedNote}");
         await _db.SaveChangesAsync(ct);
+        Publish(DocumentEventKind.Cancelled, userId, doc);
         return new(null, doc);
     }
 

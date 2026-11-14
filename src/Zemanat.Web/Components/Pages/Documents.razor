@@ -10,7 +10,10 @@
 @using Zemanat.Data.Documents
 @using Zemanat.Data.Settings
 @using Zemanat.Web.Auth
+@implements IDisposable
 @inject AuthenticationStateProvider AuthState
+@inject DocumentEventHub Hub
+@inject IServiceScopeFactory Scopes
 @inject DocumentService DocService
 @inject SettingsStore SettingsStore
 
@@ -108,6 +111,22 @@
         isOperator = state.User.IsInRole(AppRoles.Manager) || state.User.IsInRole(AppRoles.Operator);
         isStaff = state.User.IsInRole(AppRoles.Manager) || state.User.IsInRole(AppRoles.Operator) || state.User.IsInRole(AppRoles.Approver);
         await GoAsync(1);
+        Hub.Published += OnEvent;
+    }
+
+    private bool disposed;
+
+    // Refresh the list when a document that this user can see changes (staff see all, others only their own).
+    private void OnEvent(DocumentEvent e)
+    {
+        if (disposed || !(isStaff || e.PersonId == userId || e.CreatedByUserId == userId)) return;
+        _ = InvokeAsync(async () => { await GoAsync(pageNo); if (!disposed) StateHasChanged(); });
+    }
+
+    public void Dispose()
+    {
+        disposed = true;
+        Hub.Published -= OnEvent;
     }
 
     private void Select(Document d)
@@ -135,6 +154,8 @@
     {
         pageNo = n;
         DocumentStatus? status = Enum.TryParse<DocumentStatus>(statusText, out var s) ? s : null;
-        page = await DocService.SearchAsync(new DocumentFilter(text, status, null, isStaff ? null : userId), pageNo, settings!.DefaultPageSize);
+        using var scope = Scopes.CreateScope();
+        page = await scope.ServiceProvider.GetRequiredService<DocumentService>()
+            .SearchAsync(new DocumentFilter(text, status, null, isStaff ? null : userId), pageNo, settings!.DefaultPageSize);
     }
 }

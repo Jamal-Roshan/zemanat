@@ -118,3 +118,6 @@ h1.h4, h1.h3 { color: #174a6e; font-weight: 700; }
     .pt-sheet { box-shadow: none; margin: 0; page-break-after: always; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* In-page notifications (new request waiting, request approved or rejected) */
+.toast-stack { position: fixed; top: 4.5rem; left: 1rem; z-index: 1080; max-width: 22rem; }

@@ -9,7 +9,10 @@
 @using Zemanat.Data.Documents
 @using Zemanat.Data.Settings
 @using Zemanat.Web.Auth
+@implements IDisposable
 @inject AuthenticationStateProvider AuthState
+@inject DocumentEventHub Hub
+@inject IServiceScopeFactory Scopes
 @inject DocumentService DocService
 @inject SettingsStore SettingsStore
 
@@ -69,11 +72,30 @@
         var state = await AuthState.GetAuthenticationStateAsync();
         userId = AccountEndpoints.GetUserId(state.User) ?? 0;
         await LoadAsync();
+        Hub.Published += OnEvent;
+    }
+
+    private bool disposed;
+
+    // Somebody else submitted, approved or cancelled something: reload the list without a page refresh.
+    private void OnEvent(DocumentEvent e)
+    {
+        if (disposed) return;
+        _ = InvokeAsync(async () => { await LoadAsync(); if (!disposed) StateHasChanged(); });
+    }
+
+    public void Dispose()
+    {
+        disposed = true;
+        Hub.Published -= OnEvent;
     }
 
     private async Task LoadAsync()
     {
-        page = await DocService.SearchAsync(new DocumentFilter(Status: DocumentStatus.PendingApproval), 1, 200);
+        // A fresh scope, so a reload caused by an event never overlaps with a call the page itself is running.
+        using var scope = Scopes.CreateScope();
+        page = await scope.ServiceProvider.GetRequiredService<DocumentService>()
+            .SearchAsync(new DocumentFilter(Status: DocumentStatus.PendingApproval), 1, 200);
         foreach (var d in page.Items) notes.TryAdd(d.Id, null);
     }
 

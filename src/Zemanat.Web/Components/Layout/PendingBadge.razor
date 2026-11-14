@@ -1,0 +1,45 @@
+@implements IDisposable
+@using Zemanat.Core.Domain
+@using Zemanat.Data.Documents
+@inject DocumentEventHub Hub
+@inject IServiceScopeFactory Scopes
+
+@if (count > 0)
+{
+    <span class="badge rounded-pill bg-danger me-1"><bdi>@Zemanat.Core.Text.PersianText.ToPersianDigits(count.ToString())</bdi></span>
+}
+
+@code {
+    private int count;
+    private bool disposed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Hub.Published += OnEvent;
+        await RefreshAsync();
+    }
+
+    private void OnEvent(DocumentEvent e)
+    {
+        if (disposed) return;
+        _ = InvokeAsync(async () => { await RefreshAsync(); if (!disposed) StateHasChanged(); });
+    }
+
+    // A separate scope: the badge must never share a database connection with the page that is open.
+    private async Task RefreshAsync()
+    {
+        try
+        {
+            using var scope = Scopes.CreateScope();
+            var stats = await scope.ServiceProvider.GetRequiredService<DocumentService>().GetStatsAsync();
+            count = stats.Pending;
+        }
+        catch (Exception) { }
+    }
+
+    public void Dispose()
+    {
+        disposed = true;
+        Hub.Published -= OnEvent;
+    }
+}

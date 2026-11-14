@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "Manager")]
 @using Zemanat.Data.Documents
 @inject MaintenanceService MaintenanceSvc
+@inject SampleDataService SampleSvc
 @inject NavigationManager Navigation
 
 <PageTitle>پاک‌سازی سامانه</PageTitle>
@@ -15,6 +16,13 @@
 
 @if (!string.IsNullOrEmpty(error)) { <div class="alert alert-warning">@error</div> }
 
+<div class="card card-body mb-4">
+    <h2 class="h6">داده‌ی نمونه برای آزمایش</h2>
+    <p class="small text-muted mb-2">دوازده کارمند ساختگی (کد ۹۰۰۱ تا ۹۰۱۲، رمز همان کد) و چند سند نمونه اضافه می‌کند. فقط برای آزمایش است؛ بعداً با «پاک‌سازی» از بین می‌رود.</p>
+    @if (!string.IsNullOrEmpty(sampleMessage)) { <div class="alert alert-info py-2">@sampleMessage</div> }
+    <div><button class="btn btn-outline-primary" disabled="@busy" @onclick="AddSampleAsync">افزودن داده‌ی نمونه</button></div>
+</div>
+
 <div class="card card-body">
     <label class="form-label">برای تأیید، کلمه‌ی <strong>پاک‌سازی</strong> را بنویسید</label>
     <div class="input-group">
@@ -25,8 +33,16 @@
 
 @code {
     private string confirm = string.Empty;
-    private string? error;
+    private string? error, sampleMessage;
     private bool busy;
+
+    private async Task AddSampleAsync()
+    {
+        busy = true;
+        try { sampleMessage = await SampleSvc.AddAsync() ?? "داده‌ی نمونه اضافه شد."; }
+        catch (Exception ex) { sampleMessage = "افزودن انجام نشد: " + ex.Message; }
+        busy = false;
+    }
 
     private async Task WipeAsync()
     {

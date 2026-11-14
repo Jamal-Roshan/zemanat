@@ -15,7 +15,7 @@
                         <li class="nav-item"><NavLink class="nav-link" href="/requests/new"><i class="bi bi-plus-circle ms-1"></i>درخواست جدید</NavLink></li>
                         <li class="nav-item"><NavLink class="nav-link" href="/documents"><i class="bi bi-files ms-1"></i>اسناد</NavLink></li>
                         <AuthorizeView Roles="@($"{AppRoles.Manager},{AppRoles.Approver}")" Context="approver">
-                            <li class="nav-item"><NavLink class="nav-link" href="/approvals"><i class="bi bi-check2-square ms-1"></i>تأیید</NavLink></li>
+                            <li class="nav-item"><NavLink class="nav-link" href="/approvals"><i class="bi bi-check2-square ms-1"></i>تأیید <PendingBadge /></NavLink></li>
                         </AuthorizeView>
                         <AuthorizeView Roles="@($"{AppRoles.Manager},{AppRoles.Operator}")" Context="staff">
                             <li class="nav-item"><NavLink class="nav-link" href="/users"><i class="bi bi-people ms-1"></i>کاربران</NavLink></li>
@@ -39,6 +39,8 @@
         </AuthorizeView>
     </div>
 </nav>
+
+<AuthorizeView><Authorized Context="notify"><NotificationHost /></Authorized></AuthorizeView>
 
 <main class="container py-4">
     @Body
