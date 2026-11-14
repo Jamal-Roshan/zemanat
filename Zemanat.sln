@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zemanat.Web", "src\Zemanat.Web\Zemanat.Web.csproj", "{87D037B8-BC0B-4FDE-8662-4FE1222FF5B6}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zemanat.Core", "src\Zemanat.Core\Zemanat.Core.csproj", "{8A5CBD9B-92E0-46AE-B5BC-CB70F213EB29}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zemanat.Data", "src\Zemanat.Data\Zemanat.Data.csproj", "{17E9F2C6-274B-484B-9881-063BF0B5CF39}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zemanat.Web", "src\Zemanat.Web\Zemanat.Web.csproj", "{87D037B8-BC0B-4FDE-8662-4FE1222FF5B6}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Zemanat.Tests", "tests\Zemanat.Tests\Zemanat.Tests.csproj", "{5CC4D0E7-FF0E-4F80-AAF0-32E239403E43}"
 EndProject

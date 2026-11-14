@@ -1,0 +1,89 @@
+@page "/approvals"
+@attribute [Authorize(Roles = "Manager,Approver")]
+@using Zemanat.Core.Dates
+@using Zemanat.Core.Domain
+@using Zemanat.Core.Finance
+@using Zemanat.Core.Settings
+@using Zemanat.Core.Text
+@using Zemanat.Data.Documents
+@using Zemanat.Data.Settings
+@using Zemanat.Web.Auth
+@inject AuthenticationStateProvider AuthState
+@inject DocumentService Documents
+@inject SettingsStore SettingsStore
+
+<PageTitle>تأیید درخواست‌ها</PageTitle>
+
+<h1 class="h4 mb-3">درخواست‌های در انتظار تأیید</h1>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div class="alert @(isError ? "alert-danger" : "alert-success")">@message</div>
+}
+
+@if (page is not null && settings is not null)
+{
+    @if (page.Items.Count == 0)
+    {
+        <p class="text-muted">درخواستی منتظر تأیید نیست.</p>
+    }
+
+    @foreach (var d in page.Items)
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between flex-wrap">
+                    <div>
+                        <strong>@d.PersonName</strong> (<bdi>@PersianText.ToPersianDigits(d.PersonnelCode)</bdi>) - @d.OrgUnit
+                        <div class="text-muted small">@d.Type.Title() برای @d.Beneficiary - <bdi>@JalaliDate.Format(IranClock.ToIran(d.CreatedUtc), persianDigits: true)</bdi></div>
+                    </div>
+                    <div class="text-end">
+                        <div><bdi>@MoneyFormatter.FormatWithUnit(d.AmountRial, settings.MoneyUnit)</bdi></div>
+                        <div class="text-danger small">مازاد: <bdi>@MoneyFormatter.FormatWithUnit(d.ExcessAmountRial, settings.MoneyUnit)</bdi></div>
+                        <div class="text-muted small">سقف مجاز: <bdi>@MoneyFormatter.FormatWithUnit(d.CapRial, settings.MoneyUnit)</bdi></div>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(d.Description)) { <div class="small mt-1">@d.Description</div> }
+                <div class="input-group mt-3">
+                    <input class="form-control" placeholder="یادداشت (برای رد الزامی است)" @bind="notes[d.Id]" />
+                    <button class="btn btn-success" @onclick="() => ApproveAsync(d.Id)">تأیید و صدور</button>
+                    <button class="btn btn-outline-danger" @onclick="() => RejectAsync(d.Id)">رد</button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private SystemSettings? settings;
+    private DocumentPage? page;
+    private readonly Dictionary<int, string?> notes = new();
+    private string? message;
+    private bool isError;
+    private int userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        settings = await SettingsStore.LoadAsync();
+        var state = await AuthState.GetAuthenticationStateAsync();
+        userId = AccountEndpoints.GetUserId(state.User) ?? 0;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        page = await Documents.SearchAsync(new DocumentFilter(Status: DocumentStatus.PendingApproval), 1, 200);
+        foreach (var d in page.Items) notes.TryAdd(d.Id, null);
+    }
+
+    private Task ApproveAsync(int id) => RunAsync(() => Documents.ApproveAsync(id, userId, notes[id]), "سند تأیید و صادر شد.");
+    private Task RejectAsync(int id) => RunAsync(() => Documents.RejectAsync(id, userId, notes[id]), "درخواست رد شد.");
+
+    private async Task RunAsync(Func<Task<DocumentResult>> action, string success)
+    {
+        var result = await action();
+        isError = !result.Success;
+        message = result.Error ?? success;
+        await LoadAsync();
+    }
+}

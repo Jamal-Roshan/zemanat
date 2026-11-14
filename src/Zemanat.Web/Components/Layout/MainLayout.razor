@@ -7,6 +7,11 @@
         <AuthorizeView>
             <Authorized>
                 <nav class="d-flex align-items-center gap-3">
+                    <a href="/requests/new">درخواست جدید</a>
+                    <a href="/documents">اسناد</a>
+                    <AuthorizeView Roles="@($"{AppRoles.Manager},{AppRoles.Approver}")" Context="approver">
+                        <a href="/approvals">تأیید</a>
+                    </AuthorizeView>
                     <AuthorizeView Roles="@($"{AppRoles.Manager},{AppRoles.Operator}")" Context="staff">
                         <a href="/users">کاربران</a>
                         <a href="/import">بارگذاری پرسنل</a>

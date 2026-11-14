@@ -1,0 +1,88 @@
+@page "/documents"
+@attribute [Authorize]
+@using Zemanat.Core.Dates
+@using Zemanat.Core.Documents
+@using Zemanat.Core.Domain
+@using Zemanat.Core.Finance
+@using Zemanat.Core.Security
+@using Zemanat.Core.Settings
+@using Zemanat.Core.Text
+@using Zemanat.Data.Documents
+@using Zemanat.Data.Settings
+@using Zemanat.Web.Auth
+@inject AuthenticationStateProvider AuthState
+@inject DocumentService Documents
+@inject SettingsStore SettingsStore
+
+<PageTitle>اسناد</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">@(isStaff ? "همه‌ی اسناد" : "اسناد من")</h1>
+    <a class="btn btn-primary" href="/requests/new">درخواست جدید</a>
+</div>
+
+<div class="row g-2 mb-3">
+    <div class="col-md-5"><input class="form-control" placeholder="جست‌وجو: شماره، کد پرسنلی، نام، بانک" @bind="text" @onkeyup="OnKey" /></div>
+    <div class="col-md-3">
+        <select class="form-select" @bind="statusText">
+            <option value="">همه‌ی وضعیت‌ها</option>
+            @foreach (var s in Enum.GetValues<DocumentStatus>()) { <option value="@s">@s.Title()</option> }
+        </select>
+    </div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" @onclick="() => GoAsync(1)">جست‌وجو</button></div>
+</div>
+
+@if (page is not null && settings is not null)
+{
+    <p class="text-muted small">تعداد: <bdi>@PersianText.ToPersianDigits(page.Total.ToString())</bdi></p>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle">
+            <thead><tr><th>شماره</th><th>نوع</th><th>فرد</th><th>بانک / مرجع</th><th>مبلغ</th><th>وضعیت</th><th>تاریخ ثبت</th></tr></thead>
+            <tbody>
+            @foreach (var d in page.Items)
+            {
+                <tr>
+                    <td><bdi>@(d.NumberText is null ? "-" : PersianText.ToPersianDigits(d.NumberText))</bdi></td>
+                    <td>@d.Type.Title()</td>
+                    <td>@d.PersonName <small class="text-muted"><bdi>@PersianText.ToPersianDigits(d.PersonnelCode)</bdi></small></td>
+                    <td>@d.Beneficiary</td>
+                    <td><bdi>@MoneyFormatter.Format(d.AmountRial, settings.MoneyUnit)</bdi>@(d.IsSurplus ? " (مازاد)" : "")</td>
+                    <td>@d.Status.Title()</td>
+                    <td><bdi>@JalaliDate.Format(IranClock.ToIran(d.CreatedUtc), persianDigits: true)</bdi></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <button class="btn btn-sm btn-outline-secondary" disabled="@(pageNo <= 1)" @onclick="() => GoAsync(pageNo - 1)">قبلی</button>
+        <span>صفحه‌ی <bdi>@PersianText.ToPersianDigits(pageNo.ToString())</bdi></span>
+        <button class="btn btn-sm btn-outline-secondary" disabled="@(pageNo * settings.DefaultPageSize >= page.Total)" @onclick="() => GoAsync(pageNo + 1)">بعدی</button>
+    </div>
+}
+
+@code {
+    private SystemSettings? settings;
+    private DocumentPage? page;
+    private bool isStaff;
+    private int userId, pageNo = 1;
+    private string? text, statusText = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        settings = await SettingsStore.LoadAsync();
+        var state = await AuthState.GetAuthenticationStateAsync();
+        userId = AccountEndpoints.GetUserId(state.User) ?? 0;
+        isStaff = state.User.IsInRole(AppRoles.Manager) || state.User.IsInRole(AppRoles.Operator) || state.User.IsInRole(AppRoles.Approver);
+        await GoAsync(1);
+    }
+
+    private async Task OnKey(KeyboardEventArgs e) { if (e.Key == "Enter") await GoAsync(1); }
+
+    private async Task GoAsync(int n)
+    {
+        pageNo = n;
+        DocumentStatus? status = Enum.TryParse<DocumentStatus>(statusText, out var s) ? s : null;
+        page = await Documents.SearchAsync(new DocumentFilter(text, status, null, isStaff ? null : userId), pageNo, settings!.DefaultPageSize);
+    }
+}

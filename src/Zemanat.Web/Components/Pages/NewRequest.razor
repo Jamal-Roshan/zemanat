@@ -1,0 +1,196 @@
+@page "/requests/new"
+@attribute [Authorize]
+@using Zemanat.Core.Domain
+@using Zemanat.Core.Documents
+@using Zemanat.Core.Finance
+@using Zemanat.Core.Security
+@using Zemanat.Core.Settings
+@using Zemanat.Core.Text
+@using Zemanat.Data.Documents
+@using Zemanat.Data.Settings
+@using Zemanat.Data.Users
+@using Zemanat.Web.Auth
+@inject AuthenticationStateProvider AuthState
+@inject DocumentService Documents
+@inject UserAdminService Users
+@inject SettingsStore SettingsStore
+@inject NavigationManager Navigation
+
+<PageTitle>درخواست جدید</PageTitle>
+
+<h1 class="h4 mb-3">ثبت درخواست ضمانت‌نامه یا گواهی</h1>
+
+@if (settings is null)
+{
+    <p>در حال بارگذاری...</p>
+}
+else
+{
+    <div class="card card-body mb-3">
+        @if (isStaff)
+        {
+            <div class="input-group mb-2">
+                <input class="form-control" dir="ltr" placeholder="کد پرسنلی فرد" @bind="codeInput" @onkeyup="OnCodeKey" />
+                <button class="btn btn-outline-primary" @onclick="FindPersonAsync">جست‌وجو</button>
+            </div>
+        }
+
+        @if (person is null)
+        {
+            <p class="text-muted mb-0">@(isStaff ? "ابتدا کد پرسنلی را جست‌وجو کنید." : "اطلاعات شما پیدا نشد.")</p>
+        }
+        else
+        {
+            <div class="mb-2"><strong>@person.FullName</strong> (<bdi>@PersianText.ToPersianDigits(person.Code)</bdi>) - @person.OrgUnit</div>
+            @if (credit is not null)
+            {
+                <div class="row text-center g-2">
+                    <div class="col-4"><div class="border rounded p-2">سقف مجاز<br /><strong><bdi>@Money(credit.Cap)</bdi></strong></div></div>
+                    <div class="col-4"><div class="border rounded p-2">استفاده‌شده<br /><strong><bdi>@Money(credit.ActiveTotal)</bdi></strong></div></div>
+                    <div class="col-4"><div class="border rounded p-2">باقی‌مانده<br /><strong><bdi>@Money(credit.Remaining)</bdi></strong></div></div>
+                </div>
+            }
+        }
+    </div>
+
+    @if (person is not null)
+    {
+        @if (!string.IsNullOrEmpty(error)) { <div class="alert alert-danger">@error</div> }
+        @if (createdMessage is not null) { <div class="alert alert-success">@createdMessage</div> }
+
+        <div class="card card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">نوع</label>
+                    <select class="form-select" @bind="type">
+                        <option value="@DocumentType.Guarantee">@settings.GuaranteeTitle</option>
+                        <option value="@DocumentType.SalaryCertificate">@settings.SalaryCertificateTitle</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">مبلغ (@MoneyFormatter.UnitTitle(settings.MoneyUnit))</label>
+                    <input class="form-control" dir="ltr" inputmode="numeric" @bind="amountText" @bind:event="oninput" @onchange="UpdatePreviewAsync" />
+                    @if (requestedRial > 0)
+                    {
+                        <div class="form-text">@MoneyFormatter.AmountInWords(requestedRial, settings.MoneyUnit)</div>
+                    }
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">بانک یا مرجع</label>
+                    <input class="form-control" @bind="beneficiary" />
+                </div>
+                <div class="col-12">
+                    <label class="form-label">توضیحات (اختیاری)</label>
+                    <input class="form-control" @bind="description" />
+                </div>
+            </div>
+
+            @if (credit is { IsSurplus: true })
+            {
+                <div class="alert alert-warning mt-3 mb-0">
+                    @if (!settings.AllowSurplus)
+                    {
+                        <span>مبلغ از سقف باقی‌مانده بیشتر است و ثبت مازاد غیرفعال است.</span>
+                    }
+                    else
+                    {
+                        <div>مبلغ <bdi>@Money(credit.ExcessAmount)</bdi> بالاتر از سقف باقی‌مانده است (درخواست مازاد).</div>
+                        <div class="small my-2">@settings.SurplusCommitmentText</div>
+                        <label><input type="checkbox" @bind="accept" /> تعهدنامه را می‌پذیرم</label>
+                        @if (willWait)
+                        {
+                            <div class="small mt-1">این درخواست پس از تأیید تأییدکننده شماره می‌گیرد.</div>
+                        }
+                    }
+                </div>
+            }
+
+            <div class="mt-3">
+                <button class="btn btn-primary" disabled="@busy" @onclick="SubmitAsync">ثبت درخواست</button>
+                <a class="btn btn-link" href="/documents">فهرست اسناد</a>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private SystemSettings? settings;
+    private bool isStaff, isManager, busy, accept;
+    private int userId;
+    private UserListItem? person;
+    private string codeInput = "", amountText = "", beneficiary = "", description = "";
+    private DocumentType type = DocumentType.Guarantee;
+    private CreditAssessment? credit;
+    private long requestedRial;
+    private string? error, createdMessage;
+
+    private bool willWait => credit is { IsSurplus: true } && !isManager
+        && DocumentRules.NeedsApproval(settings!.ApprovalMode, true);
+
+    protected override async Task OnInitializedAsync()
+    {
+        settings = await SettingsStore.LoadAsync();
+        var state = await AuthState.GetAuthenticationStateAsync();
+        userId = AccountEndpoints.GetUserId(state.User) ?? 0;
+        isManager = state.User.IsInRole(AppRoles.Manager);
+        isStaff = isManager || state.User.IsInRole(AppRoles.Operator);
+
+        if (!isStaff)
+        {
+            person = (await Users.GetAsync(userId));
+            await UpdatePreviewAsync();
+        }
+    }
+
+    private async Task OnKey(KeyboardEventArgs e) { if (e.Key == "Enter") await FindPersonAsync(); }
+    private Task OnCodeKey(KeyboardEventArgs e) => OnKey(e);
+
+    private async Task FindPersonAsync()
+    {
+        error = null;
+        createdMessage = null;
+        var code = PersianText.ToLatinDigits(PersianText.CleanText(codeInput));
+        var page = await Users.SearchAsync(code, null, true, 1, 20);
+        person = page.Items.FirstOrDefault(u => u.Code == code);
+        if (person is null) error = "فرد فعالی با این کد پرسنلی پیدا نشد.";
+        accept = false;
+        await UpdatePreviewAsync();
+    }
+
+    private string Money(long rial) => MoneyFormatter.FormatWithUnit(rial, settings!.MoneyUnit);
+
+    private async Task UpdatePreviewAsync()
+    {
+        requestedRial = PersianText.TryParseAmount(amountText, out var typed)
+            ? MoneyFormatter.ToRial(typed, settings!.MoneyUnit) : 0;
+        credit = person is null ? null : await Documents.PreviewAsync(person.Id, requestedRial);
+        if (credit is not { IsSurplus: true }) accept = false;
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (person is null) return;
+        busy = true;
+        error = null;
+        createdMessage = null;
+        await UpdatePreviewAsync();
+
+        var result = await Documents.CreateAsync(userId, isManager, person.Id, type, requestedRial, beneficiary, description, accept);
+        if (result.Success)
+        {
+            var doc = result.Document!;
+            createdMessage = doc.Status == DocumentStatus.Issued
+                ? $"سند با شماره‌ی {PersianText.ToPersianDigits(doc.NumberText ?? "")} صادر شد."
+                : "درخواست ثبت شد و منتظر تأیید است.";
+            amountText = beneficiary = description = "";
+            accept = false;
+            await UpdatePreviewAsync();
+        }
+        else
+        {
+            error = result.Error;
+        }
+
+        busy = false;
+    }
+}

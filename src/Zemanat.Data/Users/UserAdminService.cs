@@ -62,6 +62,16 @@ public class UserAdminService
         return new UserPage(items, total);
     }
 
+    public async Task<UserListItem?> GetAsync(int userId, CancellationToken ct = default)
+    {
+        var u = await _db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == userId, ct);
+        if (u is null) return null;
+        var roles = await (from ur in _db.UserRoles join r in _db.Roles on ur.RoleId equals r.Id
+                           where ur.UserId == userId select r.Name!).ToListAsync(ct);
+        return new UserListItem(u.Id, u.UserName!, u.FullName, u.OrgUnit, u.EmploymentType, u.IsActive,
+            u.DeactivationKind, u.DeactivationReason, roles);
+    }
+
     /// <summary>Replaces the person's roles. The built-in admin keeps all roles; at most the four known roles are allowed.</summary>
     public async Task<string?> SetRolesAsync(int userId, IEnumerable<string> roles, CancellationToken ct = default)
     {
