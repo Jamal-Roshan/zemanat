@@ -49,6 +49,11 @@ public sealed class Stage9Tests : IDisposable
         using var scope = _provider.CreateScope();
         var docs = scope.ServiceProvider.GetRequiredService<DocumentService>();
 
+        var issued = await docs.CreateAsync(7, false, _personId, DocumentType.Guarantee, 1_000_000, "بانک", null, false);
+        Assert.Equal(DocumentEventKind.Issued, seen[^1].Kind);
+        await docs.SettleAsync(issued.Document!.Id, 7);
+        Assert.Equal(DocumentEventKind.Settled, seen[^1].Kind);
+
         var pending = await docs.CreateAsync(7, false, _personId, DocumentType.Guarantee, 90_000_000, "بانک", null, true);
         Assert.Equal(DocumentEventKind.Submitted, seen[^1].Kind);
         Assert.Equal(7, seen[^1].CreatedByUserId);
@@ -63,10 +68,6 @@ public sealed class Stage9Tests : IDisposable
         await docs.RejectAsync(second.Document!.Id, 2, "دلیل");
         Assert.Equal(DocumentEventKind.Rejected, seen[^1].Kind);
 
-        var issued = await docs.CreateAsync(7, false, _personId, DocumentType.Guarantee, 1_000_000, "بانک", null, false);
-        Assert.Equal(DocumentEventKind.Issued, seen[^1].Kind);
-        await docs.SettleAsync(issued.Document!.Id, 7);
-        Assert.Equal(DocumentEventKind.Settled, seen[^1].Kind);
     }
 
     [Fact]
