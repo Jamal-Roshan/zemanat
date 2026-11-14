@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Zemanat.Core.Domain;
+using Zemanat.Core.Finance;
 using Zemanat.Core.Settings;
 using Zemanat.Data;
 using Zemanat.Data.Documents;
