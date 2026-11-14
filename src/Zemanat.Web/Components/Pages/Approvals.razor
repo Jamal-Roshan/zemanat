@@ -9,7 +9,7 @@
 @using Zemanat.Data.Settings
 @using Zemanat.Web.Auth
 @inject AuthenticationStateProvider AuthState
-@inject DocumentService Documents
+@inject DocumentService DocService
 @inject SettingsStore SettingsStore
 
 <PageTitle>تأیید درخواست‌ها</PageTitle>
@@ -72,12 +72,12 @@
 
     private async Task LoadAsync()
     {
-        page = await Documents.SearchAsync(new DocumentFilter(Status: DocumentStatus.PendingApproval), 1, 200);
+        page = await DocService.SearchAsync(new DocumentFilter(Status: DocumentStatus.PendingApproval), 1, 200);
         foreach (var d in page.Items) notes.TryAdd(d.Id, null);
     }
 
-    private Task ApproveAsync(int id) => RunAsync(() => Documents.ApproveAsync(id, userId, notes[id]), "سند تأیید و صادر شد.");
-    private Task RejectAsync(int id) => RunAsync(() => Documents.RejectAsync(id, userId, notes[id]), "درخواست رد شد.");
+    private Task ApproveAsync(int id) => RunAsync(() => DocService.ApproveAsync(id, userId, notes[id]), "سند تأیید و صادر شد.");
+    private Task RejectAsync(int id) => RunAsync(() => DocService.RejectAsync(id, userId, notes[id]), "درخواست رد شد.");
 
     private async Task RunAsync(Func<Task<DocumentResult>> action, string success)
     {

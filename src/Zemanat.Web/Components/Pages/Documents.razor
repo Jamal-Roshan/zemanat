@@ -11,7 +11,7 @@
 @using Zemanat.Data.Settings
 @using Zemanat.Web.Auth
 @inject AuthenticationStateProvider AuthState
-@inject DocumentService Documents
+@inject DocumentService DocService
 @inject SettingsStore SettingsStore
 
 <PageTitle>اسناد</PageTitle>
@@ -83,6 +83,6 @@
     {
         pageNo = n;
         DocumentStatus? status = Enum.TryParse<DocumentStatus>(statusText, out var s) ? s : null;
-        page = await Documents.SearchAsync(new DocumentFilter(text, status, null, isStaff ? null : userId), pageNo, settings!.DefaultPageSize);
+        page = await DocService.SearchAsync(new DocumentFilter(text, status, null, isStaff ? null : userId), pageNo, settings!.DefaultPageSize);
     }
 }

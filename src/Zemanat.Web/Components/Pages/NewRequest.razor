@@ -11,7 +11,7 @@
 @using Zemanat.Data.Users
 @using Zemanat.Web.Auth
 @inject AuthenticationStateProvider AuthState
-@inject DocumentService Documents
+@inject DocumentService DocService
 @inject UserAdminService Users
 @inject SettingsStore SettingsStore
 @inject NavigationManager Navigation
@@ -163,7 +163,7 @@ else
     {
         requestedRial = PersianText.TryParseAmount(amountText, out var typed)
             ? MoneyFormatter.ToRial(typed, settings!.MoneyUnit) : 0;
-        credit = person is null ? null : await Documents.PreviewAsync(person.Id, requestedRial);
+        credit = person is null ? null : await DocService.PreviewAsync(person.Id, requestedRial);
         if (credit is not { IsSurplus: true }) accept = false;
     }
 
@@ -175,7 +175,7 @@ else
         createdMessage = null;
         await UpdatePreviewAsync();
 
-        var result = await Documents.CreateAsync(userId, isManager, person.Id, type, requestedRial, beneficiary, description, accept);
+        var result = await DocService.CreateAsync(userId, isManager, person.Id, type, requestedRial, beneficiary, description, accept);
         if (result.Success)
         {
             var doc = result.Document!;
