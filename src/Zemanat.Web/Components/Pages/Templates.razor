@@ -2,7 +2,7 @@
 @attribute [Authorize(Roles = "Manager")]
 @using Zemanat.Core.Domain
 @using Zemanat.Data.Documents
-@inject TemplateService Templates
+@inject TemplateService TemplateSvc
 
 <PageTitle>قالب‌های چاپ</PageTitle>
 
@@ -60,7 +60,7 @@
 
     private async Task LoadAsync()
     {
-        html = await Templates.GetHtmlAsync(Kind) ?? string.Empty;
+        html = await TemplateSvc.GetHtmlAsync(Kind) ?? string.Empty;
         keys = TemplateService.KnownKeys(Kind).OrderBy(k => k).ToList();
         message = null;
     }
@@ -82,14 +82,14 @@
             return;
         }
 
-        await Templates.SaveAsync(Kind, html);
+        await TemplateSvc.SaveAsync(Kind, html);
         isError = false;
         message = "قالب ذخیره شد.";
     }
 
     private async Task ResetAsync()
     {
-        await Templates.ResetAsync(Kind);
+        await TemplateSvc.ResetAsync(Kind);
         await LoadAsync();
         isError = false;
         message = "قالب به حالت اولیه برگشت.";
