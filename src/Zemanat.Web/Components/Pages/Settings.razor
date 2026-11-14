@@ -1,0 +1,147 @@
+@page "/settings"
+@attribute [Authorize(Roles = "Manager")]
+@using Zemanat.Core.Domain
+@using Zemanat.Core.Finance
+@using Zemanat.Core.Settings
+@using Zemanat.Data.Settings
+@inject SettingsStore Store
+
+<PageTitle>تنظیمات</PageTitle>
+
+<h1 class="h4 mb-3">تنظیمات سامانه</h1>
+
+@if (model is null)
+{
+    <p>در حال بارگذاری...</p>
+}
+else
+{
+    @if (errors.Count > 0)
+    {
+        <div class="alert alert-danger"><ul class="mb-0">@foreach (var e in errors) { <li>@e</li> }</ul></div>
+    }
+    @if (saved) { <div class="alert alert-success">تنظیمات ذخیره شد.</div> }
+
+    <EditForm Model="model" OnSubmit="SaveAsync" FormName="settings">
+        <div class="card card-body mb-3">
+            <h2 class="h6 text-primary">سازمان و امضا</h2>
+            <div class="row g-3">
+                <div class="col-md-6"><label class="form-label">نام سازمان</label><InputText class="form-control" @bind-Value="model.OrganizationName" /></div>
+                <div class="col-md-6"><label class="form-label">واحد صادرکننده</label><InputText class="form-control" @bind-Value="model.IssuingUnitTitle" /></div>
+                <div class="col-md-12"><label class="form-label">نشانی</label><InputText class="form-control" @bind-Value="model.OrganizationAddress" /></div>
+                <div class="col-md-6"><label class="form-label">نام امضاکننده</label><InputText class="form-control" @bind-Value="model.SignerName" /></div>
+                <div class="col-md-6"><label class="form-label">سمت امضاکننده</label><InputText class="form-control" @bind-Value="model.SignerPosition" /></div>
+                <div class="col-md-12">
+                    <label class="form-label">تصویر امضا یا مهر (PNG یا JPG، حداکثر ۳۰۰ کیلوبایت)</label>
+                    <InputFile class="form-control" OnChange="OnSignature" accept="image/png,image/jpeg" />
+                    @if (!string.IsNullOrEmpty(model.SignatureImageDataUri))
+                    {
+                        <div class="mt-2 d-flex align-items-center gap-3">
+                            <img src="@model.SignatureImageDataUri" alt="امضا" style="max-height:80px" class="border rounded bg-white" />
+                            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => model.SignatureImageDataUri = string.Empty">حذف تصویر</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-body mb-3">
+            <h2 class="h6 text-primary">عنوان‌ها و آدرس سایت</h2>
+            <div class="row g-3">
+                <div class="col-md-4"><label class="form-label">عنوان ضمانت‌نامه</label><InputText class="form-control" @bind-Value="model.GuaranteeTitle" /></div>
+                <div class="col-md-4"><label class="form-label">عنوان گواهی کسر از حقوق</label><InputText class="form-control" @bind-Value="model.SalaryCertificateTitle" /></div>
+                <div class="col-md-4"><label class="form-label">عنوان استعلام بانکی</label><InputText class="form-control" @bind-Value="model.BankInquiryTitle" /></div>
+                <div class="col-md-12">
+                    <label class="form-label">آدرس سایت (برای QR، مثل https://zemanat.example.ir)</label>
+                    <InputText class="form-control" dir="ltr" @bind-Value="model.WebsiteBaseUrl" />
+                    <div class="form-text">اگر خالی باشد، آدرسی که کاربر با آن وارد شده در QR استفاده می‌شود.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-body mb-3">
+            <h2 class="h6 text-primary">سقف اعتبار و تأیید</h2>
+            <div class="row g-3">
+                <div class="col-md-3"><label class="form-label">درصد مجاز از خالص پرداختی</label><InputNumber class="form-control" @bind-Value="model.CreditPercent" /></div>
+                <div class="col-md-3"><label class="form-label">تعداد ماه</label><InputNumber class="form-control" @bind-Value="model.CreditMonths" /></div>
+                <div class="col-md-3">
+                    <label class="form-label">واحد نمایش مبلغ</label>
+                    <InputSelect class="form-select" @bind-Value="model.MoneyUnit">
+                        <option value="@MoneyUnit.Rial">ریال</option>
+                        <option value="@MoneyUnit.Toman">تومان</option>
+                    </InputSelect>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">نیاز به تأیید</label>
+                    <InputSelect class="form-select" @bind-Value="model.ApprovalMode">
+                        <option value="@ApprovalMode.SurplusOnly">فقط اسناد مازاد</option>
+                        <option value="@ApprovalMode.None">هیچ سندی (حتی مازاد)</option>
+                    </InputSelect>
+                </div>
+                <div class="col-md-12"><label class="form-check"><InputCheckbox class="form-check-input" @bind-Value="model.AllowSurplus" /> ثبت درخواست مازاد مجاز است</label></div>
+                <div class="col-md-12"><label class="form-label">متن تعهدنامه‌ی مازاد</label><InputTextArea class="form-control" rows="2" @bind-Value="model.SurplusCommitmentText" /></div>
+            </div>
+        </div>
+
+        <div class="card card-body mb-3">
+            <h2 class="h6 text-primary">شماره‌گذاری، رمز عبور و فهرست‌ها</h2>
+            <div class="row g-3">
+                <div class="col-md-3"><label class="form-label">کد شماره‌ی دبیرخانه</label><InputText class="form-control" dir="ltr" @bind-Value="model.DocumentNumberCode" /></div>
+                <div class="col-md-3"><label class="form-label">جداکننده</label><InputText class="form-control" dir="ltr" @bind-Value="model.DocumentNumberSeparator" /></div>
+                <div class="col-md-3">
+                    <label class="form-label">ردیف هر صفحه</label>
+                    <InputSelect class="form-select" @bind-Value="model.DefaultPageSize">
+                        @foreach (var n in SystemSettingsValidator.AllowedPageSizes) { <option value="@n">@n</option> }
+                    </InputSelect>
+                </div>
+                <div class="col-md-12"><label class="form-check"><InputCheckbox class="form-check-input" @bind-Value="model.RequireComplexPassword" /> رمز عبور پیچیده (حداقل ۸ نویسه، حرف و عدد)</label></div>
+                <div class="col-md-12"><label class="form-check"><InputCheckbox class="form-check-input" @bind-Value="model.ForcePasswordChangeOnFirstLogin" /> تغییر رمز در اولین ورود</label></div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" disabled="@busy"><i class="bi bi-save ms-1"></i>ذخیره</button>
+    </EditForm>
+}
+
+@code {
+    private const long MaxImageBytes = 300 * 1024;
+    private SystemSettings? model;
+    private List<string> errors = new();
+    private bool saved, busy;
+
+    protected override async Task OnInitializedAsync() => model = await Store.LoadAsync();
+
+    private async Task OnSignature(InputFileChangeEventArgs e)
+    {
+        errors = new();
+        var type = e.File.ContentType;
+        if (type is not ("image/png" or "image/jpeg"))
+        {
+            errors.Add("فقط تصویر PNG یا JPG پذیرفته می‌شود.");
+            return;
+        }
+
+        if (e.File.Size > MaxImageBytes)
+        {
+            errors.Add("حجم تصویر باید کمتر از ۳۰۰ کیلوبایت باشد.");
+            return;
+        }
+
+        await using var stream = e.File.OpenReadStream(MaxImageBytes);
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory);
+        model!.SignatureImageDataUri = $"data:{type};base64,{Convert.ToBase64String(memory.ToArray())}";
+    }
+
+    private async Task SaveAsync()
+    {
+        saved = false;
+        errors = SystemSettingsValidator.Validate(model!).ToList();
+        if (errors.Count > 0) return;
+
+        busy = true;
+        await Store.SaveAsync(model!);
+        saved = true;
+        busy = false;
+    }
+}

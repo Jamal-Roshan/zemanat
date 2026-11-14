@@ -13,6 +13,7 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
 
     public DbSet<SettingEntry> Settings => Set<SettingEntry>();
     public DbSet<Document> Documents => Set<Document>();
+    public DbSet<PrintTemplate> PrintTemplates => Set<PrintTemplate>();
     public DbSet<SecretariatCounter> SecretariatCounters => Set<SecretariatCounter>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -35,6 +36,10 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
         });
 
         builder.Entity<SecretariatCounter>(e => e.HasKey(x => x.Year));
+        builder.Entity<PrintTemplate>(e =>
+        {
+            e.HasIndex(x => x.Kind).IsUnique();
+        });
 
         builder.Entity<Document>(e =>
         {
@@ -47,6 +52,10 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
             e.Property(x => x.NumberText).HasMaxLength(50);
             e.Property(x => x.TrackingCode).HasMaxLength(12);
             e.Property(x => x.DecisionNote).HasMaxLength(500);
+            e.Property(x => x.FatherName).HasMaxLength(100);
+            e.Property(x => x.GenderPrefix).HasMaxLength(10);
+            e.Property(x => x.LoanOwnerName).HasMaxLength(200);
+            e.Property(x => x.LoanOwnerFatherName).HasMaxLength(100);
             e.HasOne(x => x.Person).WithMany().HasForeignKey(x => x.PersonId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => x.TrackingCode).IsUnique();
             e.HasIndex(x => new { x.SequenceYear, x.Sequence }).IsUnique();

@@ -1,0 +1,39 @@
+@page "/print/{Id:int}"
+@attribute [Authorize]
+@using Zemanat.Core.Security
+@using Zemanat.Data.Documents
+@using Zemanat.Web.Auth
+@inject AuthenticationStateProvider AuthState
+@inject DocumentPrintService Printer
+@inject NavigationManager Navigation
+
+<PageTitle>چاپ سند</PageTitle>
+
+<div class="d-flex gap-2 mb-3 no-print">
+    <button class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer ms-1"></i>چاپ</button>
+    <a class="btn btn-outline-secondary" href="/documents">بازگشت به فهرست</a>
+</div>
+
+@if (loaded && html is null)
+{
+    <div class="alert alert-warning no-print">این سند پیدا نشد، هنوز صادر نشده یا به شما تعلق ندارد.</div>
+}
+else if (html is not null)
+{
+    <div class="print-scroll">@((MarkupString)html)</div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private string? html;
+    private bool loaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var user = (await AuthState.GetAuthenticationStateAsync()).User;
+        var isStaff = user.IsInRole(AppRoles.Manager) || user.IsInRole(AppRoles.Operator);
+        html = await Printer.RenderAsync(Id, AccountEndpoints.GetUserId(user) ?? 0, isStaff, Navigation.BaseUri);
+        loaded = true;
+    }
+}

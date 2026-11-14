@@ -37,7 +37,7 @@
     <p class="text-muted small">تعداد: <bdi>@PersianText.ToPersianDigits(page.Total.ToString())</bdi></p>
     <div class="table-responsive">
         <table class="table table-sm table-hover align-middle">
-            <thead><tr><th>شماره</th><th>نوع</th><th>فرد</th><th>بانک / مرجع</th><th>مبلغ</th><th>وضعیت</th><th>تاریخ ثبت</th></tr></thead>
+            <thead><tr><th>شماره</th><th>نوع</th><th>فرد</th><th>بانک / مرجع</th><th>مبلغ</th><th>وضعیت</th><th>تاریخ ثبت</th><th></th></tr></thead>
             <tbody>
             @foreach (var d in page.Items)
             {
@@ -49,6 +49,7 @@
                     <td><bdi>@MoneyFormatter.Format(d.AmountRial, settings.MoneyUnit)</bdi>@(d.IsSurplus ? " (مازاد)" : "")</td>
                     <td>@d.Status.Title()</td>
                     <td><bdi>@JalaliDate.Format(IranClock.ToIran(d.CreatedUtc), persianDigits: true)</bdi></td>
+                    <td>@if (d.Status is DocumentStatus.Issued or DocumentStatus.Settled) { <a class="btn btn-sm btn-outline-primary" href="/print/@d.Id"><i class="bi bi-printer ms-1"></i>چاپ</a> }</td>
                 </tr>
             }
             </tbody>

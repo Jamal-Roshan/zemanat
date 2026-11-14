@@ -10,6 +10,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.*" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.*" />
     <PackageVersion Include="ClosedXML" Version="0.*" />
+    <PackageVersion Include="QRCoder" Version="1.*" />
     <!-- Test packages -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.*" />
     <PackageVersion Include="xunit" Version="2.9.3" />

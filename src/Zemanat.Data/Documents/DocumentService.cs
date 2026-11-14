@@ -16,6 +16,8 @@ public sealed record DocumentResult(string? Error, Document? Document = null)
     public bool Success => Error is null;
 }
 
+public sealed record DocumentExtras(string? FatherName, string? GenderPrefix, string? LoanOwnerName, string? LoanOwnerFatherName);
+
 public sealed record DocumentFilter(string? Text = null, DocumentStatus? Status = null, DocumentType? Type = null, int? PersonId = null);
 
 public sealed record DocumentPage(IReadOnlyList<Document> Items, int Total);
@@ -52,7 +54,7 @@ public class DocumentService
     /// <param name="creatorId">The signed-in user.</param>
     /// <param name="creatorIsManager">A manager's documents are issued directly, even surplus ones.</param>
     public async Task<DocumentResult> CreateAsync(int creatorId, bool creatorIsManager, int personId, DocumentType type,
-        long amountRial, string? beneficiary, string? description, bool acceptSurplus, CancellationToken ct = default)
+        long amountRial, string? beneficiary, string? description, bool acceptSurplus, DocumentExtras? extras = null, CancellationToken ct = default)
     {
         if (amountRial <= 0) return new("مبلغ باید بیشتر از صفر باشد.");
         var bank = PersianText.CleanText(beneficiary);
@@ -92,6 +94,10 @@ public class DocumentService
             EmploymentType = person.EmploymentType,
             NetPayRial = person.NetPayRial,
             CapRial = assessment.Cap,
+            FatherName = Clean(extras?.FatherName),
+            GenderPrefix = extras?.GenderPrefix == "خانم" ? "خانم" : "آقای",
+            LoanOwnerName = Clean(extras?.LoanOwnerName),
+            LoanOwnerFatherName = Clean(extras?.LoanOwnerFatherName),
             TrackingCode = TrackingCode.Generate(),
             CreatedByUserId = creatorId,
             CreatedUtc = DateTime.UtcNow
@@ -171,6 +177,8 @@ public class DocumentService
         var items = await q.OrderByDescending(d => d.Id).Skip((Math.Max(page, 1) - 1) * pageSize).Take(pageSize).ToListAsync(ct);
         return new(items, total);
     }
+
+    private static string? Clean(string? text) => string.IsNullOrWhiteSpace(text) ? null : PersianText.CleanText(text);
 
     private async Task IssueAsync(Document doc, SystemSettings settings, CancellationToken ct)
     {

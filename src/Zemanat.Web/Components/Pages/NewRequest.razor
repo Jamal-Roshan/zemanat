@@ -79,6 +79,29 @@ else
                     <label class="form-label">بانک یا مرجع</label>
                     <input class="form-control" @bind="beneficiary" />
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label">عنوان متقاضی</label>
+                    <select class="form-select" @bind="gender">
+                        <option value="آقای">آقای</option>
+                        <option value="خانم">خانم</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">نام پدر متقاضی</label>
+                    <input class="form-control" @bind="fatherName" />
+                </div>
+                @if (type == DocumentType.Guarantee)
+                {
+                    <div class="col-md-4"></div>
+                    <div class="col-md-4">
+                        <label class="form-label">نام و نام خانوادگی وام‌گیرنده</label>
+                        <input class="form-control" @bind="loanOwnerName" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">نام پدر وام‌گیرنده</label>
+                        <input class="form-control" @bind="loanOwnerFather" />
+                    </div>
+                }
                 <div class="col-12">
                     <label class="form-label">توضیحات (اختیاری)</label>
                     <input class="form-control" @bind="description" />
@@ -119,6 +142,7 @@ else
     private int userId;
     private UserListItem? person;
     private string codeInput = "", amountText = "", beneficiary = "", description = "";
+    private string gender = "آقای", fatherName = "", loanOwnerName = "", loanOwnerFather = "";
     private DocumentType type = DocumentType.Guarantee;
     private CreditAssessment? credit;
     private long requestedRial;
@@ -175,14 +199,22 @@ else
         createdMessage = null;
         await UpdatePreviewAsync();
 
-        var result = await DocService.CreateAsync(userId, isManager, person.Id, type, requestedRial, beneficiary, description, accept);
+        if (type == DocumentType.Guarantee && string.IsNullOrWhiteSpace(loanOwnerName))
+        {
+            error = "برای ضمانت‌نامه نام وام‌گیرنده را بنویسید.";
+            busy = false;
+            return;
+        }
+
+        var extras = new DocumentExtras(fatherName, gender, type == DocumentType.Guarantee ? loanOwnerName : null, type == DocumentType.Guarantee ? loanOwnerFather : null);
+        var result = await DocService.CreateAsync(userId, isManager, person.Id, type, requestedRial, beneficiary, description, accept, extras);
         if (result.Success)
         {
             var doc = result.Document!;
             createdMessage = doc.Status == DocumentStatus.Issued
                 ? $"سند با شماره‌ی {PersianText.ToPersianDigits(doc.NumberText ?? "")} صادر شد."
                 : "درخواست ثبت شد و منتظر تأیید است.";
-            amountText = beneficiary = description = "";
+            amountText = beneficiary = description = loanOwnerName = loanOwnerFather = "";
             accept = false;
             await UpdatePreviewAsync();
         }

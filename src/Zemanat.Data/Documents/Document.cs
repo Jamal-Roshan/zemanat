@@ -20,6 +20,12 @@ public class Document
     public string Beneficiary { get; set; } = string.Empty;
     public string? Description { get; set; }
 
+    // Printed on the forms
+    public string? FatherName { get; set; }
+    public string GenderPrefix { get; set; } = "آقای";
+    public string? LoanOwnerName { get; set; }
+    public string? LoanOwnerFatherName { get; set; }
+
     public bool IsSurplus { get; set; }
     public long ExcessAmountRial { get; set; }
     public bool SurplusCommitmentAccepted { get; set; }
@@ -52,4 +58,13 @@ public class SecretariatCounter
 {
     public int Year { get; set; }
     public int LastSequence { get; set; }
+}
+
+/// <summary>An edited copy of a print template. When no row exists for a kind, the built-in default is used.</summary>
+public class PrintTemplate
+{
+    public int Id { get; set; }
+    public Zemanat.Core.Domain.TemplateKind Kind { get; set; }
+    public string Html { get; set; } = string.Empty;
+    public DateTime UpdatedUtc { get; set; } = DateTime.UtcNow;
 }

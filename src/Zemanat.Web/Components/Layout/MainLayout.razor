@@ -1,34 +1,45 @@
 @inherits LayoutComponentBase
 @using Zemanat.Core.Security
 
-<header class="app-header">
-    <div class="container d-flex align-items-center justify-content-between py-3 flex-wrap gap-2">
-        <a class="app-title text-decoration-none" href="/">سامانه‌ی صدور ضمانت‌نامه و گواهی</a>
+<nav class="navbar navbar-expand-lg app-navbar no-print">
+    <div class="container">
+        <a class="navbar-brand" href="/"><i class="bi bi-file-earmark-check ms-1"></i> سامانه‌ی ضمانت‌نامه و گواهی</a>
         <AuthorizeView>
             <Authorized>
-                <nav class="d-flex align-items-center gap-3">
-                    <a href="/requests/new">درخواست جدید</a>
-                    <a href="/documents">اسناد</a>
-                    <AuthorizeView Roles="@($"{AppRoles.Manager},{AppRoles.Approver}")" Context="approver">
-                        <a href="/approvals">تأیید</a>
-                    </AuthorizeView>
-                    <AuthorizeView Roles="@($"{AppRoles.Manager},{AppRoles.Operator}")" Context="staff">
-                        <a href="/users">کاربران</a>
-                        <a href="/import">بارگذاری پرسنل</a>
-                    </AuthorizeView>
-                    <a href="/change-password">تغییر رمز</a>
-                    <span class="text-muted"><bdi>@context.User.Identity?.Name</bdi></span>
-                    <a href="/account/logout" class="btn btn-sm btn-outline-secondary">خروج</a>
-                </nav>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="منو">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item"><NavLink class="nav-link" href="/" Match="NavLinkMatch.All"><i class="bi bi-house ms-1"></i>خانه</NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/requests/new"><i class="bi bi-plus-circle ms-1"></i>درخواست جدید</NavLink></li>
+                        <li class="nav-item"><NavLink class="nav-link" href="/documents"><i class="bi bi-files ms-1"></i>اسناد</NavLink></li>
+                        <AuthorizeView Roles="@($"{AppRoles.Manager},{AppRoles.Approver}")" Context="approver">
+                            <li class="nav-item"><NavLink class="nav-link" href="/approvals"><i class="bi bi-check2-square ms-1"></i>تأیید</NavLink></li>
+                        </AuthorizeView>
+                        <AuthorizeView Roles="@($"{AppRoles.Manager},{AppRoles.Operator}")" Context="staff">
+                            <li class="nav-item"><NavLink class="nav-link" href="/users"><i class="bi bi-people ms-1"></i>کاربران</NavLink></li>
+                            <li class="nav-item"><NavLink class="nav-link" href="/import"><i class="bi bi-file-earmark-excel ms-1"></i>بارگذاری پرسنل</NavLink></li>
+                        </AuthorizeView>
+                        <AuthorizeView Roles="@AppRoles.Manager" Context="manager">
+                            <li class="nav-item"><NavLink class="nav-link" href="/settings"><i class="bi bi-gear ms-1"></i>تنظیمات</NavLink></li>
+                        </AuthorizeView>
+                    </ul>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="user-chip"><i class="bi bi-person-circle ms-1"></i><bdi>@context.User.Identity?.Name</bdi></span>
+                        <a href="/change-password" class="btn btn-sm btn-outline-light" title="تغییر رمز"><i class="bi bi-key"></i></a>
+                        <a href="/account/logout" class="btn btn-sm btn-light"><i class="bi bi-box-arrow-left ms-1"></i>خروج</a>
+                    </div>
+                </div>
             </Authorized>
         </AuthorizeView>
     </div>
-</header>
+</nav>
 
 <main class="container py-4">
     @Body
 </main>
 
-<footer class="app-footer text-center text-muted py-3">
+<footer class="app-footer text-center py-3 no-print">
     <small>اداره‌ی آموزش و پرورش</small>
 </footer>

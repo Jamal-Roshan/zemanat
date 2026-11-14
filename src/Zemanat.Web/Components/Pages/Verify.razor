@@ -1,0 +1,59 @@
+@page "/v/{Code}"
+@using Zemanat.Core.Dates
+@using Zemanat.Core.Documents
+@using Zemanat.Core.Domain
+@using Zemanat.Core.Finance
+@using Zemanat.Core.Text
+@using Zemanat.Data.Documents
+@inject DocumentPrintService Printer
+
+<PageTitle>اصالت‌سنجی سند</PageTitle>
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <h1 class="h4 mb-3 text-center">اصالت‌سنجی سند</h1>
+
+        @if (!loaded)
+        {
+            <p class="text-center text-muted">در حال بررسی...</p>
+        }
+        else if (doc is null)
+        {
+            <div class="alert alert-danger text-center">
+                <i class="bi bi-x-octagon ms-1"></i>سندی با این کد پیگیری پیدا نشد.
+            </div>
+        }
+        else
+        {
+            <div class="card card-body">
+                <div class="alert @(IsValid ? "alert-success" : "alert-warning") text-center">
+                    <i class="bi @(IsValid ? "bi-patch-check" : "bi-exclamation-triangle") ms-1"></i>
+                    @(IsValid ? "این سند در سامانه ثبت شده و معتبر است." : $"این سند ثبت شده است، اما وضعیت آن «{doc.Status.Title()}» است.")
+                </div>
+                <dl class="row mb-0">
+                    <dt class="col-5">نوع سند</dt><dd class="col-7">@doc.Type.Title()</dd>
+                    <dt class="col-5">شماره</dt><dd class="col-7"><bdi>@PersianText.ToPersianDigits(doc.NumberText ?? "-")</bdi></dd>
+                    <dt class="col-5">تاریخ صدور</dt><dd class="col-7"><bdi>@(doc.IssuedUtc is null ? "-" : JalaliDate.Format(IranClock.ToIran(doc.IssuedUtc.Value), persianDigits: true))</bdi></dd>
+                    <dt class="col-5">متقاضی</dt><dd class="col-7">@doc.PersonName</dd>
+                    <dt class="col-5">بانک / مرجع</dt><dd class="col-7">@doc.Beneficiary</dd>
+                    <dt class="col-5">مبلغ (ریال)</dt><dd class="col-7"><bdi>@MoneyFormatter.Format(doc.AmountRial, MoneyUnit.Rial)</bdi></dd>
+                    <dt class="col-5">وضعیت</dt><dd class="col-7">@doc.Status.Title()</dd>
+                </dl>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Code { get; set; } = string.Empty;
+
+    private Document? doc;
+    private bool loaded;
+    private bool IsValid => doc?.Status == DocumentStatus.Issued;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        doc = await Printer.FindByTrackingCodeAsync(Code);
+        loaded = true;
+    }
+}

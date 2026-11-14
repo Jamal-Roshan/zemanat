@@ -1,21 +1,68 @@
 @page "/"
 @attribute [Authorize]
-@using Zemanat.Core.Dates
-@using Zemanat.Core.Finance
-@using Zemanat.Core.Text
+@using Zemanat.Core.Security
+@inject AuthenticationStateProvider AuthState
 
 <PageTitle>سامانه‌ی صدور ضمانت‌نامه و گواهی</PageTitle>
 
-<h1 class="h3 mb-4">خوش آمدید</h1>
+<h1 class="h4 mb-4">خوش آمدید</h1>
 
-<div class="card">
-    <div class="card-body">
-        <p class="mb-2">پایه‌ی پروژه آماده است. ابزارهای فارسی در هسته کار می‌کنند:</p>
-        <ul class="mb-0">
-            <li>تاریخ امروز: <bdi>@JalaliDate.Format(IranClock.NowIran(), persianDigits: true)</bdi></li>
-            <li>مبلغ نمونه: <bdi>@MoneyFormatter.FormatWithUnit(1_500_000, MoneyUnit.Rial)</bdi></li>
-            <li>به حروف: @MoneyFormatter.AmountInWords(1_500_000, MoneyUnit.Toman)</li>
-            <li>نمونه‌ی نرمال‌سازی: @PersianText.NormalizeLetters("علي كريمي")</li>
-        </ul>
+<div class="row g-3">
+    <div class="col-md-4 col-sm-6">
+        <a class="card card-body tile text-center" href="/requests/new">
+            <i class="bi bi-plus-circle mb-2"></i><strong>درخواست جدید</strong>
+            <small class="text-muted">ثبت ضمانت‌نامه یا گواهی کسر از حقوق</small>
+        </a>
     </div>
+    <div class="col-md-4 col-sm-6">
+        <a class="card card-body tile text-center" href="/documents">
+            <i class="bi bi-files mb-2"></i><strong>اسناد</strong>
+            <small class="text-muted">فهرست، وضعیت و چاپ</small>
+        </a>
+    </div>
+    @if (isApprover)
+    {
+        <div class="col-md-4 col-sm-6">
+            <a class="card card-body tile text-center" href="/approvals">
+                <i class="bi bi-check2-square mb-2"></i><strong>تأیید درخواست‌ها</strong>
+                <small class="text-muted">درخواست‌های مازاد منتظر تأیید</small>
+            </a>
+        </div>
+    }
+    @if (isStaff)
+    {
+        <div class="col-md-4 col-sm-6">
+            <a class="card card-body tile text-center" href="/users">
+                <i class="bi bi-people mb-2"></i><strong>کاربران و نقش‌ها</strong>
+                <small class="text-muted">جست‌وجو، نقش، فعال‌سازی، بازنشانی رمز</small>
+            </a>
+        </div>
+        <div class="col-md-4 col-sm-6">
+            <a class="card card-body tile text-center" href="/import">
+                <i class="bi bi-file-earmark-excel mb-2"></i><strong>بارگذاری اکسل پرسنل</strong>
+                <small class="text-muted">افزودن و به‌روزرسانی پرسنل</small>
+            </a>
+        </div>
+    }
+    @if (isManager)
+    {
+        <div class="col-md-4 col-sm-6">
+            <a class="card card-body tile text-center" href="/settings">
+                <i class="bi bi-gear mb-2"></i><strong>تنظیمات</strong>
+                <small class="text-muted">سازمان، سقف، شماره‌گذاری، امضا و آدرس سایت</small>
+            </a>
+        </div>
+    }
 </div>
+
+@code {
+    private bool isManager, isStaff, isApprover;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthState.GetAuthenticationStateAsync()).User;
+        isManager = user.IsInRole(AppRoles.Manager);
+        isStaff = isManager || user.IsInRole(AppRoles.Operator);
+        isApprover = isManager || user.IsInRole(AppRoles.Approver);
+    }
+}
