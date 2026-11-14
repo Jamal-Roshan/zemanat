@@ -20,9 +20,11 @@
                         <AuthorizeView Roles="@($"{AppRoles.Manager},{AppRoles.Operator}")" Context="staff">
                             <li class="nav-item"><NavLink class="nav-link" href="/users"><i class="bi bi-people ms-1"></i>کاربران</NavLink></li>
                             <li class="nav-item"><NavLink class="nav-link" href="/import"><i class="bi bi-file-earmark-excel ms-1"></i>بارگذاری پرسنل</NavLink></li>
+                            <li class="nav-item"><NavLink class="nav-link" href="/reports"><i class="bi bi-bar-chart ms-1"></i>گزارش</NavLink></li>
                         </AuthorizeView>
                         <AuthorizeView Roles="@AppRoles.Manager" Context="manager">
                             <li class="nav-item"><NavLink class="nav-link" href="/settings"><i class="bi bi-gear ms-1"></i>تنظیمات</NavLink></li>
+                            <li class="nav-item"><NavLink class="nav-link" href="/audit"><i class="bi bi-journal-text ms-1"></i>ممیزی</NavLink></li>
                             <li class="nav-item"><NavLink class="nav-link" href="/templates"><i class="bi bi-code-slash ms-1"></i>قالب‌ها</NavLink></li>
                             <li class="nav-item"><NavLink class="nav-link" href="/maintenance"><i class="bi bi-trash ms-1"></i>پاک‌سازی</NavLink></li>
                         </AuthorizeView>

@@ -15,6 +15,7 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<BankInquiry> BankInquiries => Set<BankInquiry>();
     public DbSet<PrintTemplate> PrintTemplates => Set<PrintTemplate>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<SecretariatCounter> SecretariatCounters => Set<SecretariatCounter>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -37,6 +38,12 @@ public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
         });
 
         builder.Entity<SecretariatCounter>(e => e.HasKey(x => x.Year));
+        builder.Entity<AuditLog>(e =>
+        {
+            e.Property(x => x.Action).HasMaxLength(50);
+            e.Property(x => x.Details).HasMaxLength(500);
+            e.HasIndex(x => x.TimeUtc);
+        });
         builder.Entity<BankInquiry>(e =>
         {
             e.Property(x => x.BankLetterNumber).HasMaxLength(50);

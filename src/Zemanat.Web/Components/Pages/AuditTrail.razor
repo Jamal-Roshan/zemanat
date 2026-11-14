@@ -1,0 +1,48 @@
+@page "/audit"
+@attribute [Authorize(Roles = "Manager")]
+@using Zemanat.Core.Dates
+@using Zemanat.Core.Text
+@using Zemanat.Data.Documents
+@inject ReportService ReportSvc
+
+<PageTitle>لاگ ممیزی</PageTitle>
+
+<h1 class="h4 mb-3">لاگ ممیزی</h1>
+
+@if (items is not null)
+{
+    <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle">
+            <thead><tr><th>زمان</th><th>کاربر</th><th>رویداد</th></tr></thead>
+            <tbody>
+            @foreach (var a in items)
+            {
+                <tr>
+                    <td class="text-nowrap"><bdi>@JalaliDate.FormatWithTime(IranClock.ToIran(a.TimeUtc), persianDigits: true)</bdi></td>
+                    <td>@a.UserName</td>
+                    <td>@a.Details</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <button class="btn btn-outline-secondary btn-sm" disabled="@(pageNo <= 1)" @onclick="() => GoAsync(pageNo - 1)">قبلی</button>
+        <span>صفحه‌ی <bdi>@PersianText.ToPersianDigits(pageNo.ToString())</bdi> از <bdi>@PersianText.ToPersianDigits(Math.Max(1, (total + PageSize - 1) / PageSize).ToString())</bdi></span>
+        <button class="btn btn-outline-secondary btn-sm" disabled="@(pageNo * PageSize >= total)" @onclick="() => GoAsync(pageNo + 1)">بعدی</button>
+    </div>
+}
+
+@code {
+    private const int PageSize = 30;
+    private IReadOnlyList<AuditRow>? items;
+    private int pageNo = 1, total;
+
+    protected override Task OnInitializedAsync() => GoAsync(1);
+
+    private async Task GoAsync(int page)
+    {
+        pageNo = page;
+        (items, total) = await ReportSvc.AuditPageAsync(page, PageSize);
+    }
+}

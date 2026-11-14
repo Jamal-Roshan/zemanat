@@ -23,6 +23,7 @@ public static class DataServiceCollectionExtensions
         services.AddScoped<Documents.TemplateService>();
         services.AddScoped<Documents.InquiryService>();
         services.AddScoped<Documents.MaintenanceService>();
+        services.AddScoped<Documents.ReportService>();
         services.AddScoped<Documents.DocumentPrintService>();
         services.AddScoped<Personnel.PersonnelImportService>();
 

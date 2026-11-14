@@ -110,6 +110,7 @@ public class DocumentService
         if (waits)
         {
             doc.Status = DocumentStatus.PendingApproval;
+            Audit.Add(_db, creatorId, "create", $"ثبت درخواست {type.Title()} برای {doc.PersonName} (در انتظار تأیید)");
             await _db.SaveChangesAsync(ct);
         }
         else
@@ -121,6 +122,7 @@ public class DocumentService
                 doc.DecidedUtc = doc.IssuedUtc;
             }
 
+            Audit.Add(_db, creatorId, "issue", $"صدور {type.Title()} شماره {doc.NumberText} برای {doc.PersonName}");
             await _db.SaveChangesAsync(ct);
         }
 
@@ -140,6 +142,7 @@ public class DocumentService
         doc.DecidedByUserId = approverId;
         doc.DecidedUtc = doc.IssuedUtc;
         doc.DecisionNote = string.IsNullOrWhiteSpace(note) ? null : PersianText.CleanText(note);
+        Audit.Add(_db, approverId, "approve", $"تأیید و صدور سند شماره {doc.NumberText} ({doc.PersonName})");
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return new(null, doc);
@@ -157,6 +160,7 @@ public class DocumentService
         doc.DecidedByUserId = approverId;
         doc.DecidedUtc = DateTime.UtcNow;
         doc.DecisionNote = PersianText.CleanText(note);
+        Audit.Add(_db, approverId, "reject", $"رد درخواست {doc.PersonName}: {doc.DecisionNote}");
         await _db.SaveChangesAsync(ct);
         return new(null, doc);
     }
@@ -174,6 +178,7 @@ public class DocumentService
         doc.Status = DocumentStatus.Settled;
         doc.ClosedUtc = DateTime.UtcNow;
         doc.ClosedByUserId = userId;
+        Audit.Add(_db, userId, "settle", $"تسویه سند شماره {doc.NumberText} ({doc.PersonName})");
         await _db.SaveChangesAsync(ct);
         return new(null, doc);
     }
@@ -191,6 +196,7 @@ public class DocumentService
         doc.ClosedUtc = DateTime.UtcNow;
         doc.ClosedByUserId = userId;
         doc.ClosedNote = PersianText.CleanText(reason);
+        Audit.Add(_db, userId, "cancel", $"ابطال سند {doc.NumberText ?? "بدون شماره"} ({doc.PersonName}): {doc.ClosedNote}");
         await _db.SaveChangesAsync(ct);
         return new(null, doc);
     }

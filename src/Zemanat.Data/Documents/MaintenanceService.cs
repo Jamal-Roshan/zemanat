@@ -29,6 +29,7 @@ public class MaintenanceService
         await _db.SecretariatCounters.ExecuteDeleteAsync(ct);
         await _db.PrintTemplates.ExecuteDeleteAsync(ct);
         await _db.Settings.ExecuteDeleteAsync(ct);
+        await _db.AuditLogs.ExecuteDeleteAsync(ct);
         await _db.Set<IdentityUserRole<int>>().ExecuteDeleteAsync(ct);
         await _db.Set<IdentityUserClaim<int>>().ExecuteDeleteAsync(ct);
         await _db.Set<IdentityUserLogin<int>>().ExecuteDeleteAsync(ct);
@@ -39,5 +40,7 @@ public class MaintenanceService
         _db.ChangeTracker.Clear();
 
         await _seeder.SeedAsync(ct);
+        Audit.Add(_db, null, "wipe", "پاک‌سازی کامل سامانه");
+        await _db.SaveChangesAsync(ct);
     }
 }

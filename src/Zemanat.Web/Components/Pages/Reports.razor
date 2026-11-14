@@ -1,0 +1,88 @@
+@page "/reports"
+@attribute [Authorize(Roles = "Manager,Operator")]
+@using Zemanat.Core.Dates
+@using Zemanat.Core.Documents
+@using Zemanat.Core.Domain
+@using Zemanat.Core.Finance
+@using Zemanat.Core.Settings
+@using Zemanat.Core.Text
+@using Zemanat.Data.Documents
+@using Zemanat.Data.Settings
+@using Zemanat.Web.Auth
+@inject ReportService ReportSvc
+@inject SettingsStore SettingsStore
+
+<PageTitle>گزارش اسناد</PageTitle>
+
+<h1 class="h4 mb-3">گزارش اسناد</h1>
+
+<div class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3"><label class="form-label">از تاریخ (۱۴۰۵/۰۱/۰۱)</label><input class="form-control" dir="ltr" @bind="from" /></div>
+        <div class="col-md-3"><label class="form-label">تا تاریخ</label><input class="form-control" dir="ltr" @bind="to" /></div>
+        <div class="col-md-2">
+            <label class="form-label">نوع</label>
+            <select class="form-select" @bind="type">
+                <option value="">همه</option>
+                @foreach (var t in Enum.GetValues<DocumentType>().Where(t => t is DocumentType.Guarantee or DocumentType.SalaryCertificate)) { <option value="@((int)t)">@t.Title()</option> }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">وضعیت</label>
+            <select class="form-select" @bind="status">
+                <option value="">همه</option>
+                @foreach (var s in Enum.GetValues<DocumentStatus>()) { <option value="@((int)s)">@s.Title()</option> }
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button class="btn btn-primary" @onclick="RunAsync">نمایش</button>
+            <a class="btn btn-success" href="@ExcelUrl">Excel</a>
+        </div>
+    </div>
+</div>
+
+@if (rows is not null && settings is not null)
+{
+    <p class="text-muted">تعداد: <bdi>@PersianText.ToPersianDigits(rows.Count.ToString())</bdi>
+        - جمع مبلغ (@MoneyFormatter.UnitTitle(settings.MoneyUnit)): <bdi>@MoneyFormatter.Format(rows.Sum(r => r.AmountRial), settings.MoneyUnit)</bdi></p>
+    <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle">
+            <thead><tr><th>شماره</th><th>نوع</th><th>وضعیت</th><th>نام</th><th>مبلغ</th><th>بانک</th><th>تاریخ ثبت</th></tr></thead>
+            <tbody>
+            @foreach (var d in rows.Take(500))
+            {
+                <tr>
+                    <td><bdi>@PersianText.ToPersianDigits(d.NumberText ?? "-")</bdi></td>
+                    <td>@d.Type.Title()</td>
+                    <td>@d.Status.Title()</td>
+                    <td>@d.PersonName</td>
+                    <td><bdi>@MoneyFormatter.Format(d.AmountRial, settings.MoneyUnit)</bdi></td>
+                    <td>@d.Beneficiary</td>
+                    <td><bdi>@JalaliDate.Format(IranClock.ToIran(d.CreatedUtc), persianDigits: true)</bdi></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    @if (rows.Count > 500) { <p class="text-muted small">فقط ۵۰۰ ردیف اول نمایش داده شد؛ فایل Excel همه‌ی ردیف‌ها را دارد.</p> }
+}
+
+@code {
+    private string? from, to, type, status;
+    private IReadOnlyList<Document>? rows;
+    private SystemSettings? settings;
+
+    private int? TypeValue => int.TryParse(type, out var v) ? v : null;
+    private int? StatusValue => int.TryParse(status, out var v) ? v : null;
+
+    private string ExcelUrl => "/reports/documents.xlsx?from=" + Uri.EscapeDataString(from ?? "") + "&to=" + Uri.EscapeDataString(to ?? "")
+        + (TypeValue is { } t ? "&type=" + t : "") + (StatusValue is { } s ? "&status=" + s : "");
+
+    protected override async Task OnInitializedAsync()
+    {
+        settings = await SettingsStore.LoadAsync();
+        await RunAsync();
+    }
+
+    private async Task RunAsync() => rows = await ReportSvc.QueryAsync(ReportEndpoints.BuildFilter(from, to, StatusValue, TypeValue));
+}

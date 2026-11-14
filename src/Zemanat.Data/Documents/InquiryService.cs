@@ -63,6 +63,7 @@ public class InquiryService
             CreatedByUserId = userId
         };
         _db.BankInquiries.Add(inquiry);
+        Audit.Add(_db, userId, "inquiry", $"ثبت استعلام بانکی شماره {inquiry.NumberText} برای سند {doc.NumberText}");
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return new(null, inquiry);
