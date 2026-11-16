@@ -8,8 +8,22 @@ public static class PersonnelRowParser
 {
     public static (IReadOnlyList<PersonnelRow> Rows, IReadOnlyList<PersonnelError> Errors) Parse(IEnumerable<PersonnelRawRow> raw)
     {
+        var (rows, errors, skipped) = ParseLenient(raw);
+        if (skipped.Count == 0) return (rows, errors);
+
+        var all = errors.Concat(skipped.Select(x => new PersonnelError(x.RowNumber, "نوع استخدام باید رسمی، آزمایشی یا پیمانی باشد."))).OrderBy(e => e.RowNumber).ToList();
+        return (rows, all);
+    }
+
+    /// <summary>
+    /// Like <see cref="Parse"/>, but a row whose only problem is the employment type is not an error: it is skipped
+    /// and reported in the third list (with its personnel code), and the other rows can still be imported.
+    /// </summary>
+    public static (IReadOnlyList<PersonnelRow> Rows, IReadOnlyList<PersonnelError> Errors, IReadOnlyList<SkippedPersonnel> Skipped) ParseLenient(IEnumerable<PersonnelRawRow> raw)
+    {
         var rows = new List<PersonnelRow>();
         var errors = new List<PersonnelError>();
+        var skipped = new List<SkippedPersonnel>();
         var seen = new Dictionary<string, int>();
 
         foreach (var r in raw)
@@ -48,17 +62,29 @@ public static class PersonnelRowParser
                 errors.Add(new(r.RowNumber, "خالص پرداختی خالی یا نامعتبر است."));
             }
 
-            if (!EmploymentTypes.TryParse(r.EmploymentType, out var type))
-            {
-                errors.Add(new(r.RowNumber, "نوع استخدام باید رسمی، آزمایشی یا پیمانی باشد."));
-            }
+            var badType = !EmploymentTypes.TryParse(r.EmploymentType, out var type);
 
             if (errors.Count == before)
             {
-                rows.Add(new PersonnelRow(r.RowNumber, code, first, last, national, net, type, unit));
+                if (badType)
+                {
+                    skipped.Add(new(r.RowNumber, code, "نوع استخدام باید رسمی، آزمایشی یا پیمانی باشد؛ این ردیف وارد نشد."));
+                }
+                else
+                {
+                    rows.Add(new PersonnelRow(r.RowNumber, code, first, last, national, net, type, unit));
+                }
+            }
+            else if (badType)
+            {
+                // The row is already invalid for other reasons; mention the type problem as well.
+                errors.Add(new(r.RowNumber, "نوع استخدام باید رسمی، آزمایشی یا پیمانی باشد."));
             }
         }
 
-        return (rows, errors);
+        return (rows, errors, skipped);
     }
 }
+
+/// <summary>A row that was left out only because its employment type is not valid.</summary>
+public sealed record SkippedPersonnel(int RowNumber, string Code, string Message);

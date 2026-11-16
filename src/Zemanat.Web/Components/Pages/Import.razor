@@ -33,6 +33,21 @@
         ورود اطلاعات انجام شد: <bdi>@Fa(result.Added)</bdi> نفر جدید، <bdi>@Fa(result.Updated)</bdi> نفر به‌روزرسانی،
         <bdi>@Fa(result.Reactivated)</bdi> نفر فعال‌شده‌ی مجدد، <bdi>@Fa(result.Deactivated)</bdi> نفر غیرفعال.
     </div>
+    @if (result.Skipped.Count > 0)
+    {
+        <div class="alert alert-warning">
+            <strong><bdi>@Fa(result.Skipped.Count)</bdi> ردیف به‌خاطر نوع استخدام نامعتبر وارد نشد</strong> (اطلاعات قبلی این افراد، در صورت وجود، دست‌نخورده ماند). بقیه‌ی ردیف‌ها وارد شدند.
+            <table class="table table-sm table-bordered bg-white mt-2 mb-0">
+                <thead><tr><th style="width:6rem">ردیف</th><th style="width:10rem">کد پرسنلی</th><th>توضیح</th></tr></thead>
+                <tbody>
+                @foreach (var x in result.Skipped.Take(300))
+                {
+                    <tr><td><bdi>@Fa(x.RowNumber)</bdi></td><td><bdi>@PersianText.ToPersianDigits(x.Code)</bdi></td><td>@x.Message</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
 }
 else if (result is not null)
 {

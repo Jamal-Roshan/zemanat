@@ -33,6 +33,19 @@ public class PersonnelParserTests
     }
 
     [Fact]
+    public void Lenient_parse_skips_rows_with_only_a_bad_type()
+    {
+        var (rows, errors, skipped) = PersonnelRowParser.ParseLenient([
+            Row(2),
+            Row(3, code: "1002", type: "نامعلوم"),
+            Row(4, code: "1003", type: "نامعلوم", national: "1")]);
+        Assert.Single(rows);
+        Assert.Equal(new[] { 4 }, errors.Select(e => e.RowNumber).Distinct().ToArray());
+        var s = Assert.Single(skipped);
+        Assert.Equal((3, "1002"), (s.RowNumber, s.Code));
+    }
+
+    [Fact]
     public void Every_problem_is_reported_with_its_row()
     {
         var (rows, errors) = PersonnelRowParser.Parse([
@@ -107,6 +120,27 @@ public sealed class ImportTests : IDisposable
         Assert.True(await users.CheckPasswordAsync(user!, "1002"));
         Assert.Equal([AppRoles.Employee], await users.GetRolesAsync(user!));
         Assert.Equal(EmploymentType.Contractual, user!.EmploymentType);
+    }
+
+    [Fact]
+    public async Task Bad_employment_type_skips_only_that_row_and_keeps_the_existing_person()
+    {
+        using var scope = _provider.CreateScope();
+        var import = scope.ServiceProvider.GetRequiredService<PersonnelImportService>();
+        await import.ImportAsync(Workbook(P("1001"), P("1002")));
+
+        var result = await import.ImportAsync(Workbook(P("1001", first: "جدید"), P("1002", type: "نامعلوم"), P("1003", type: "نامعلوم"), P("1004")));
+
+        Assert.True(result.Success);
+        Assert.Equal(new[] { "1002", "1003" }, result.Skipped.Select(x => x.Code).ToArray());
+        Assert.Equal(1, result.Added);   // 1004 only
+        Assert.Equal(1, result.Updated); // 1001 only
+        Assert.Equal(0, result.Deactivated);
+
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+        Assert.True((await users.FindByNameAsync("1002"))!.IsActive);
+        Assert.Null(await users.FindByNameAsync("1003"));
+        Assert.NotNull(await users.FindByNameAsync("1004"));
     }
 
     [Fact]

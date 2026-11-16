@@ -10,8 +10,11 @@ using Zemanat.Data.Users;
 namespace Zemanat.Data.Personnel;
 
 public sealed record PersonnelImportResult(
-    IReadOnlyList<PersonnelError> Errors, int Added, int Updated, int Reactivated, int Deactivated)
+    IReadOnlyList<PersonnelError> Errors, int Added, int Updated, int Reactivated, int Deactivated,
+    IReadOnlyList<SkippedPersonnel>? SkippedRows = null)
 {
+    public IReadOnlyList<SkippedPersonnel> Skipped => SkippedRows ?? Array.Empty<SkippedPersonnel>();
+
     public bool Success => Errors.Count == 0;
 }
 
@@ -42,7 +45,7 @@ public class PersonnelImportService
             return new(readErrors, 0, 0, 0, 0);
         }
 
-        var (rows, errors) = PersonnelRowParser.Parse(raw);
+        var (rows, errors, skipped) = PersonnelRowParser.ParseLenient(raw);
         if (errors.Count > 0)
         {
             return new(errors, 0, 0, 0, 0);
@@ -54,7 +57,9 @@ public class PersonnelImportService
             .ToDictionaryAsync(u => u.UserName!, ct);
 
         int added = 0, updated = 0, reactivated = 0, deactivated = 0;
-        var fileCodes = rows.Select(r => r.Code).ToHashSet();
+        // A skipped row (bad employment type) still counts as "present in the file", so that person is not deactivated
+        // and keeps the data already stored.
+        var fileCodes = rows.Select(r => r.Code).Concat(skipped.Select(x => x.Code)).ToHashSet();
         var newUsers = new List<AppUser>();
 
         foreach (var row in rows)
@@ -118,6 +123,6 @@ public class PersonnelImportService
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         await _admin.SyncAdminAsync(ct);
-        return new(errors, added, updated, reactivated, deactivated);
+        return new(errors, added, updated, reactivated, deactivated, skipped);
     }
 }
